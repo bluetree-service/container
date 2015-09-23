@@ -2,15 +2,15 @@
 /**
  * trait object to store data or models and allows to easily access to object
  *
- * @package     BlueData
+ * @package     BlueContainer
  * @subpackage  Base
  * @author      Michał Adamiak    <chajr@bluetree.pl>
  * @copyright   bluetree-service
- * @link https://github.com/bluetree-service/data/wiki/ClassKernel_Base_BlueObject BlueObject class documentation
+ * @link https://github.com/bluetree-service/container/wiki/ContainerObject ContainerObject class documentation
  */
-namespace BlueData\Base;
+namespace BlueContainer;
 
-use BlueData\Data\Object;
+use BlueContainer\Data\Object;
 use BlueData\Data\Xml;
 use stdClass;
 use DOMException;
@@ -21,7 +21,7 @@ use Exception;
 use Closure;
 use ReflectionFunction;
 
-trait BlueObject
+trait ContainerObject
 {
     /**
      * text value for skipped object
@@ -610,7 +610,7 @@ trait BlueObject
             $data = $this->_DATA;
         }
 
-        if ($dataToCheck instanceof Object) {
+        if ($dataToCheck instanceof Container) {
             $dataToCheck = $dataToCheck->toArray();
         }
 
@@ -1009,10 +1009,10 @@ trait BlueObject
     /**
      * allow to join two blue objects into one
      *
-     * @param \BlueData\Data\Object $object
+     * @param \BlueContainer\Container $object
      * @return $this
      */
-    public function mergeBlueObject(Object $object)
+    public function mergeBlueObject(Container $object)
     {
         $newData = $object->toArray();
 

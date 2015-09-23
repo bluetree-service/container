@@ -1,15 +1,15 @@
 <?php
 /**
- * test BlueObject using Object class
+ * test ContainerObject using Container class
  *
- * @package     BlueData
+ * @package     BlueContainer
  * @subpackage  Test
  * @author      Michał Adamiak    <chajr@bluetree.pl>
  * @copyright   bluetree-service
  */
 namespace Test;
 
-use BlueData\Data\Object;
+use BlueContainer\Container;
 use Zend\Serializer\Serializer;
 use StdClass;
 
@@ -25,7 +25,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testDataValidation()
     {
-        $object = new Object();
+        $object = new Container();
         $data   = [
             'data_first'    => 'first data',
             'data_second'   => 'second data',
@@ -75,7 +75,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testDataValidationInConstructor()
     {
-        $object = new Object([
+        $object = new Container([
             'data'          => [
                 'data_first'    => 'first data',
                 'data_second'   => 4535,
@@ -94,7 +94,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testDataPreparationInConstructor()
     {
-        $object = new Object([
+        $object = new Container([
             'data'          => [
                 'data_first'    => 'first data',
                 'data_second'   => 4535,
@@ -282,7 +282,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testAccessForNonExistingMethods()
     {
-        $object = new Object();
+        $object = new Container();
         $object->executeNonExistingMethod();
 
         $this->assertTrue($object->checkErrors());
@@ -456,7 +456,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testDataPreparationOnEnter($first, $second)
     {
-        $object = new Object();
+        $object = new Container();
         $object->putPreparationCallback('#data_[\w]+#', function ($key, $value) {
             if ($key === 'data_second') {
                 return 'second';
@@ -497,7 +497,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testDataPreparationOnReturn($first, $second)
     {
-        $object = new Object();
+        $object = new Container();
         $object->putReturnCallback('#data_[\w]+#', function ($key, $value) {
             if ($key === 'data_second') {
                 return 'second';
@@ -541,7 +541,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     {
         $jsonData = $this->_exampleJsonData($first, $second);
 
-        $object = new Object([
+        $object = new Container([
             'data'  => $jsonData,
             'type'  => 'json',
         ]);
@@ -564,7 +564,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     {
         $std = $this->_exampleStdData($first, $second);
 
-        $object = new Object(['data' => $std]);
+        $object = new Container(['data' => $std]);
 
         $this->assertEquals($first, $object->getDataFirst());
         $this->assertEquals($second, $object->toArray('data_second'));
@@ -584,7 +584,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     {
         $serialized = $this->_exampleSerializedData($first, $second);
 
-        $object = new Object([
+        $object = new Container([
             'type'  => 'serialized',
             'data'  => $serialized,
         ]);
@@ -606,7 +606,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     public function testCreationWithSerializedObject($first, $second)
     {
         $serialized = $this->_exampleSerializedData($first, $second, true);
-        $object = new Object([
+        $object = new Container([
             'type'  => 'serialized',
             'data'  => $serialized,
         ]);
@@ -631,7 +631,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     public function testCreationWithSimpleXml($first, $second)
     {
         $xml = $this->_exampleSimpleXmlData($first, $second);
-        $object = new Object([
+        $object = new Container([
             'type'  => 'simple_xml',
             'data'  => $xml,
         ]);
@@ -662,7 +662,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     public function testCreationWithXml($first, $second)
     {
         $xml = $this->_exampleXmlData($first, $second);
-        $object = new Object([
+        $object = new Container([
             'type'  => 'xml',
             'data'  => $xml,
         ]);
@@ -749,7 +749,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     {
         $data = $this->_exampleSerializedData($first, $second, true);
 
-        $object             = new Object;
+        $object             = new Container;
         $dataPreparation    = [
             '#^std_class#' => function ($key, $val) {
                 $val->data_first = self::IM_CHANGED;
@@ -924,7 +924,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testExportObjectAsSerializedStringWithObject($first, $second)
     {
-        $object = new Object();
+        $object = new Container();
         $object->putPreparationCallback([
             '#^data_second$#' => function ($key, $data) {
                 return (object)$data;
@@ -1019,11 +1019,11 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testCompareOperators()
     {
-        $object = new Object([
+        $object = new Container([
             'data' => [
                 'first'     => 5,
                 'second'    => true,
-                'object'    => new Object,
+                'object'    => new Container,
             ]
         ]);
 
@@ -1150,7 +1150,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         $csv = $this->_exampleCsvData($first, $second);
         $csv = str_replace(',', ';', $csv);
 
-        $object = new Object([
+        $object = new Container([
             'type'  => 'csv',
             'data'  => $csv,
         ]);
@@ -1177,7 +1177,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testChangeCsvDelimiter($first, $second)
     {
-        $object = new Object();
+        $object = new Container();
         $csv    = $this->_exampleCsvData($first, $second);
 
         $object->changeCsvDelimiter(',');
@@ -1223,7 +1223,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testCreationWithIniData($first, $second)
     {
-        $object = new Object([
+        $object = new Container([
             'type'  => 'ini',
             'data'  => $this->_exampleIniData($first, $second),
         ]);
@@ -1232,7 +1232,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($this->_convertType($first), $object->getDataFirst());
         $this->assertEquals($this->_convertType($second), $object->getDataSecond());
 
-        $object = new Object(['ini_section' => true]);
+        $object = new Container(['ini_section' => true]);
         $ini    = $this->_exampleIniData($first, $second, true);
 
         $this->assertTrue($object->returnProcessIniSection());
@@ -1324,8 +1324,8 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testSerializeWithException()
     {
-        $instance = new Object;
-        $instance->set('object', new \BlueData\Test\SerializeFail);
+        $instance = new Container;
+        $instance->set('object', new SerializeFail);
         $instance->serialize();
 
         $this->assertTrue($instance->checkErrors());
@@ -1377,7 +1377,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetDataForNoneExistingKey()
     {
-        $object = new Object;
+        $object = new Container;
         $object->stopOutputPreparation();
         $this->assertNull($object->get('some_key'));
     }
@@ -1439,7 +1439,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testSetData($first, $second)
     {
-        $object = new Object;
+        $object = new Container;
 
         $this->assertNull($object->get('data_first'));
 
@@ -1455,7 +1455,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testReturnValueForUnCallableFunction()
     {
-        $object = new Object([
+        $object = new Container([
             'preparation' => [
                 '#data#' => 'im not callable'
             ]
@@ -1471,7 +1471,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testAppendJsonWithError()
     {
-        $object = new Object([
+        $object = new Container([
             'type' => 'json',
             'data' => 'json',
         ]);
@@ -1488,7 +1488,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     protected function _dataPreparationCommon($first, $data, $type)
     {
-        $object             = new Object;
+        $object             = new Container;
         $dataPreparation    = [
             '#^data_first$#' => function () {
                 return self::IM_CHANGED;
@@ -1523,7 +1523,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      */
     public function testAppendSerializeForStringData()
     {
-        $object     = new Object;
+        $object     = new Container;
         $string     = "Some string to \n serialize";
         $serialized = serialize($string);
 
@@ -1552,11 +1552,11 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * 
      * @param mixed $first
      * @param mixed $second
-     * @return \BlueData\Data\Object
+     * @return \BlueContainer\Container
      */
     protected function _simpleObject($first, $second)
     {
-        return new Object(['data' => $this->_getSimpleData($first, $second)]);
+        return new Container(['data' => $this->_getSimpleData($first, $second)]);
     }
 
     /**
