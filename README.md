@@ -7,6 +7,7 @@ Bluetree Service Container
 [![License](https://poser.pugx.org/bluetree-service/container/license.svg)](https://packagist.org/packages/bluetree-service/container)
 [![Documentation Status](https://readthedocs.org/projects/container/badge/?version=latest)](https://readthedocs.org/projects/container/?badge=latest)
 [![Coverage Status](https://coveralls.io/repos/bluetree-service/container/badge.svg)](https://coveralls.io/r/bluetree-service/container)
+[![Code Climate](https://codeclimate.com/github/bluetree-service/container/badges/gpa.svg)](https://codeclimate.com/github/bluetree-service/container)
 
 Main files for all class libraries. Include classes to use ContainerObject as trait and
 independent Container with xml, json, array data handling.That package is one of the base
