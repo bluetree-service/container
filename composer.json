@@ -5,7 +5,6 @@
     "description": "Data storage and manipulation by container object",
     "keywords": ["container", "object container", "data object", "bluetree", "bluetree-service"],
     "homepage": "https://github.com/bluetree-service/container",
-    "version": "0.1.0.0",
     "authors": [
         {
             "name": "Michał Adamiak",
@@ -18,7 +17,9 @@
         "php": ">=5.4.0",
         "bluetree-service/data": "0.1.*",
         "zendframework/zend-serializer": "2.*",
-        "zendframework/zend-servicemanager": "2.*",
+        "zendframework/zend-servicemanager": "2.*"
+    },
+    "require-dev": {
         "satooshi/php-coveralls": "0.6.*"
     },
     "autoload": {
