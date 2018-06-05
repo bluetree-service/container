@@ -10,7 +10,6 @@
  */
 namespace BlueContainer;
 
-use BlueContainer\Data\Object;
 use BlueData\Data\Xml;
 use stdClass;
 use DOMException;

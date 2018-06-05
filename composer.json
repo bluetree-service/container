@@ -5,7 +5,7 @@
     "description": "Data storage and manipulation by container object",
     "keywords": ["container", "object container", "data object", "bluetree", "bluetree-service"],
     "homepage": "https://github.com/bluetree-service/container",
-    "version": "0.1.0.2",
+    "version": "0.1.0.3",
     "authors": [
         {
             "name": "Michał Adamiak",
