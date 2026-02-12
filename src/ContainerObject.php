@@ -14,8 +14,8 @@ use BlueData\Data\Xml;
 use stdClass;
 use DOMException;
 use DOMElement;
-use Zend\Serializer\Serializer;
-use Zend\Serializer\Exception\ExceptionInterface;
+use Laminas\Serializer\Adapter\PhpSerialize;
+use Laminas\Serializer\Exception\ExceptionInterface;
 use Exception;
 use Closure;
 use ReflectionFunction;
@@ -24,24 +24,24 @@ trait ContainerObject
 {
     /**
      * text value for skipped object
-     * 
+     *
      * @var string
      */
-    protected $_skippedObject = ': {;skipped_object;}';
+    protected string $skippedObject = ': {;skipped_object;}';
 
     /**
      * contains name of undefined data
-     * 
+     *
      * @var string
      */
-    protected $_defaultDataName = 'default';
+    protected string $defaultDataName = 'default';
 
     /**
      * if there was some errors in object, that variable will be set on true
      *
      * @var bool
      */
-    protected $_hasErrors = false;
+    protected bool $hasErrors = false;
 
     /**
      * will contain list of all errors that was occurred in object
@@ -50,42 +50,42 @@ trait ContainerObject
      *
      * @var array
      */
-    protected $_errorsList = [];
+    protected array $errorsList = [];
 
     /**
      * array with main object data
      * @var array
      */
-    protected $_DATA = [];
+    protected array $data = [];
 
     /**
-     * keeps data before changes (set only if some data in $_DATA was changed)
-     * @var
+     * keeps data before changes (set only if some data in $data was changed)
+     * @var array
      */
-    protected $_originalDATA = [];
+    protected array $originalData = [];
 
     /**
      * store all new added data keys, to remove them when in eg. restore original data
      * @var array
      */
-    protected $_newKeys = [];
+    protected array $newKeys = [];
 
     /**
      * @var array
      */
-    protected static $_cacheKeys = [];
+    protected static array $cacheKeys = [];
 
     /**
-     * @var boolean
+     * @var bool
      */
-    protected $_dataChanged = false;
+    protected bool $dataChanged = false;
 
     /**
      * default constructor options
      *
      * @var array
      */
-    protected $_options = [
+    protected array $options = [
         'data'                  => null,
         'type'                  => null,
         'validation'            => [],
@@ -100,149 +100,151 @@ trait ContainerObject
      *
      * @var string
      */
-    protected $_integerKeyPrefix;
+    protected string $integerKeyPrefix;
 
     /**
      * separator for data to return as string
-     * 
+     *
      * @var string
      */
-    protected $_separator = ', ';
+    protected string $separator = ', ';
 
     /**
      * store list of rules to validate data
      * keys are searched using regular expression
-     * 
+     *
      * @var array
      */
-    protected $_validationRules = [];
+    protected array $validationRules = [];
 
     /**
      * list of callbacks to prepare data before insert into object
-     * 
+     *
      * @var array
      */
-    protected $_dataPreparationCallbacks = [];
+    protected array $dataPreparationCallbacks = [];
 
     /**
      * list of callbacks to prepare data before return from object
-     * 
+     *
      * @var array
      */
-    protected $_dataRetrieveCallbacks = [];
+    protected array $dataRetrieveCallbacks = [];
 
     /**
      * for array access numeric keys, store last used numeric index
      * used only in case when object is used as array
-     * 
+     *
      * @var int
      */
-    protected $_integerKeysCounter = 0;
+    protected int $integerKeysCounter = 0;
 
     /**
      * allow to turn off/on data validation
-     * 
+     *
      * @var bool
      */
-    protected $_validationOn = true;
+    protected bool $validationOn = true;
 
     /**
      * allow to turn off/on data preparation
-     * 
+     *
      * @var bool
      */
-    protected $_getPreparationOn = true;
+    protected bool $getPreparationOn = true;
 
     /**
      * allow to turn off/on data retrieve
-     * 
+     *
      * @var bool
      */
-    protected $_setPreparationOn = true;
+    protected bool $setPreparationOn = true;
 
     /**
      * inform append* methods that data was set in object creation
-     * 
+     *
      * @var bool
      */
-    protected $_objectCreation = true;
+    protected bool $objectCreation = true;
 
     /**
      * csv variable delimiter
-     * 
+     *
      * @var string
      */
-    protected $_csvDelimiter = ';';
+    protected string $csvDelimiter = ';';
 
     /**
      * csv enclosure
-     * 
+     *
      * @var string
      */
-    protected $_csvEnclosure = '"';
+    protected string $csvEnclosure = '"';
 
     /**
      * csv escape character
-     * 
+     *
      * @var string
      */
-    protected $_csvEscape = '\\';
+    protected string $csvEscape = '\\';
 
     /**
      * csv line delimiter (single object element)
-     * 
+     *
      * @var string
      */
-    protected $_csvLineDelimiter = "\n";
+    protected string $csvLineDelimiter = "\n";
 
     /**
      * allow to process [section] as array key
-     * 
+     *
      * @var bool
      */
-    protected $_processIniSection;
+    protected bool $processIniSection;
 
     /**
      * create new Blue Object, optionally with some data
      * there are some types we can give to convert data to Blue Object
      * like: json, xml, serialized or stdClass default is array
      *
-     * @param array|null $options
+     * @param array $options
+     * @throws \ReflectionException
      */
-    public function __construct($options = [])
+    public function __construct(array $options = [])
     {
-        $this->_options             = array_merge($this->_options, $options);
-        $data                       = $this->_options['data'];
-        $this->_integerKeyPrefix    = $this->_options['integer_key_prefix'];
-        $this->_processIniSection   = $this->_options['ini_section'];
+        $this->options = array_merge($this->options, $options);
+        $data = $this->options['data'];
+        $this->integerKeyPrefix = $this->options['integer_key_prefix'];
+        $this->processIniSection = $this->options['ini_section'];
 
-        $this->_beforeInitializeObject($data);
-        $this->putValidationRule($this->_options['validation'])
-            ->putPreparationCallback($this->_options['preparation'])
-            ->initializeObject($data);
+        $this->beforeInitializeObject($data);
+        $this->putValidationRule($this->options['validation'])
+            ->putPreparationCallback($this->options['preparation']);
+
+        $data = $this->initializeObject($data);
 
         switch (true) {
-            case $this->_options['type'] === 'json':
+            case $this->options['type'] === 'json':
                 $this->appendJson($data);
                 break;
 
-            case $this->_options['type'] === 'xml':
+            case $this->options['type'] === 'xml':
                 $this->appendXml($data);
                 break;
 
-            case $this->_options['type'] === 'simple_xml':
+            case $this->options['type'] === 'simple_xml':
                 $this->appendSimpleXml($data);
                 break;
 
-            case $this->_options['type'] === 'serialized':
+            case $this->options['type'] === 'serialized':
                 $this->appendSerialized($data);
                 break;
 
-            case $this->_options['type'] === 'csv':
+            case $this->options['type'] === 'csv':
                 $this->appendCsv($data);
                 break;
 
-            case $this->_options['type'] === 'ini':
+            case $this->options['type'] === 'ini':
                 $this->appendIni($data);
                 break;
 
@@ -259,127 +261,140 @@ trait ContainerObject
         }
 
         $this->afterInitializeObject();
-        $this->_objectCreation = false;
+        $this->objectCreation = false;
     }
 
     /**
-     * return from DATA value for given object attribute
+     * return from data value for given object attribute
      *
      * @param string $key
      * @return mixed
      */
 
-    public function __get($key)
+    public function __get(string $key): mixed
     {
-        $key = $this->_convertKeyNames($key);
+        $key = $this->convertKeyNames($key);
         return $this->toArray($key);
     }
 
     /**
-     * save into DATA value given as object attribute
+     * save into data value given as object attribute
      *
      * @param string $key
      * @param mixed $value
+     * @throws \ReflectionException
      */
-    public function __set($key, $value)
+    public function __set(string $key, mixed $value): void
     {
-        $key = $this->_convertKeyNames($key);
-        $this->_putData($key, $value);
+        $key = $this->convertKeyNames($key);
+        $this->putData($key, $value);
     }
 
     /**
-     * check that variable exists in DATA table
+     * check that variable exists in data table
      *
      * @param string $key
      * @return bool
      */
-    public function __isset($key)
+    public function __isset(string $key): bool
     {
-        $key = $this->_convertKeyNames($key);
+        $key = $this->convertKeyNames($key);
         return $this->has($key);
     }
 
     /**
-     * remove given key from DATA
+     * remove given key from data
      *
-     * @param $key
+     * @param string $key
      */
-    public function __unset($key)
+    public function __unset(string $key): void
     {
-        $key = $this->_convertKeyNames($key);
+        $key = $this->convertKeyNames($key);
         $this->destroy($key);
     }
 
     /**
-     * allow to access DATA keys by using special methods
-     * like getSomeData() will return $_DATA['some_data'] value or
-     * setSomeData('val') will create $_DATA['some_data'] key with 'val' value
+     * allow to access data keys by using special methods
+     * like getSomeData() will return $data['somedata'] value or
+     * setSomeData('val') will create $data['somedata'] key with 'val' value
      * all magic methods handle data put and return preparation
      *
      * @param string $method
      * @param array $arguments
      * @return $this|bool|mixed
+     * @throws \ReflectionException
      */
-    public function __call($method, $arguments)
+    public function __call(string $method, array $arguments): mixed
     {
         switch (true) {
-            case substr($method, 0, 3) === 'get':
-                $key = $this->_convertKeyNames(substr($method, 3));
-                return $this->get($key);
+            case str_starts_with($method, 'get'):
+                $key = $this->convertKeyNames(substr($method, 3));
+                $status = $this->get($key);
+                break;
 
-            case substr($method, 0, 3) === 'set':
-                $key = $this->_convertKeyNames(substr($method, 3));
-                return $this->set($key, $arguments[0]);
+            case str_starts_with($method, 'set'):
+                $key = $this->convertKeyNames(substr($method, 3));
+                $status = $this->set($key, $arguments[0]);
+                break;
 
-            case substr($method, 0, 3) === 'has':
-                $key = $this->_convertKeyNames(substr($method, 3));
-                return $this->has($key);
+            case str_starts_with($method, 'has'):
+                $key = $this->convertKeyNames(substr($method, 3));
+                $status = $this->has($key);
+                break;
 
-            case substr($method, 0, 3) === 'not':
-                $key = $this->_convertKeyNames(substr($method, 3));
+            case str_starts_with($method, 'not'):
+                $key = $this->convertKeyNames(substr($method, 3));
                 $val = $this->get($key);
-                return $this->_compareData($arguments[0], $key, $val, '!==');
+                $status = $this->compareDataInternal($arguments[0], $key, $val, '!==');
+                break;
 
-            case substr($method, 0, 5) === 'unset' || substr($method, 0, 5) === 'destroy':
-                $key = $this->_convertKeyNames(substr($method, 5));
-                return $this->destroy($key);
+            case str_starts_with($method, 'unset') || str_starts_with($method, 'destroy'):
+                $key = $this->convertKeyNames(substr($method, 5));
+                $status = $this->destroy($key);
+                break;
 
-            case substr($method, 0, 5) === 'clear':
-                $key = $this->_convertKeyNames(substr($method, 5));
-                return $this->clear($key);
+            case str_starts_with($method, 'clear'):
+                $key = $this->convertKeyNames(substr($method, 5));
+                $status = $this->clear($key);
+                break;
 
-            case substr($method, 0, 7) === 'restore':
-                $key = $this->_convertKeyNames(substr($method, 7));
-                return $this->restore($key);
+            case str_starts_with($method, 'restore'):
+                $key = $this->convertKeyNames(substr($method, 7));
+                $status = $this->restore($key);
+                break;
 
-            case substr($method, 0, 2) === 'is':
-                $key = $this->_convertKeyNames(substr($method, 2));
+            case str_starts_with($method, 'is'):
+                $key = $this->convertKeyNames(substr($method, 2));
                 $val = $this->get($key);
-                return $this->_compareData($arguments[0], $key, $val, '===');
+                $status = $this->compareDataInternal($arguments[0], $key, $val, '===');
+                break;
 
             default:
-                $this->_errorsList['wrong_method'] = get_class($this) . ' - ' . $method;
-                $this->_hasErrors = true;
-                return false;
+                $this->errorsList['wrong_method'] = get_class($this) . ' - ' . $method;
+                $this->hasErrors = true;
+                $status = false;
+                break;
         }
+
+        return $status;
     }
 
     /**
      * compare given data with possibility to use callable functions to check data
-     * 
+     *
      * @param mixed $dataToCheck
      * @param string $key
      * @param mixed $originalData
      * @param string $comparator
      * @return bool
      */
-    protected function _compareData($dataToCheck, $key, $originalData, $comparator)
+    protected function compareDataInternal(mixed $dataToCheck, string $key, mixed $originalData, string $comparator): bool
     {
-        if (is_callable($dataToCheck)) {
-            return call_user_func_array($dataToCheck, [$key, $originalData, $this]);
+        if (\is_callable($dataToCheck)) {
+            return $dataToCheck($key, $originalData, $this);
         }
 
-        return $this->_comparator($originalData, $dataToCheck, $comparator);
+        return $this->comparator($originalData, $dataToCheck, $comparator);
     }
 
     /**
@@ -387,61 +402,61 @@ trait ContainerObject
      *
      * @return string
      */
-    public function __toString()
+    public function __toString(): string
     {
-        $this->_prepareData();
-        return implode($this->_separator, $this->toArray());
+        $this->prepareData();
+        return implode($this->separator, $this->toArray());
     }
 
     /**
-     * return boolean information that object has some error
+     * return bool information that object has some error
      *
      * @return bool
      */
-    public function checkErrors()
+    public function checkErrors(): bool
     {
-        return $this->_hasErrors;
+        return $this->hasErrors;
     }
 
     /**
      * return single error by key, ora list of all errors
      *
-     * @param string $key
+     * @param string|null $key
      * @return mixed
      */
-    public function returnObjectError($key = null)
+    public function returnObjectError(?string $key = null): mixed
     {
-        return $this->_genericReturn($key, 'error_list');
+        return $this->genericReturn($key, 'error_list');
     }
 
     /**
      * remove single error, or all object errors
      *
      * @param string|null $key
-     * @return Object
+     * @return ContainerObject|Container
      */
-    public function removeObjectError($key = null)
+    public function removeObjectError(?string $key = null): self
     {
-        $this->_genericDestroy($key, 'error_list');
-        $this->_hasErrors = false;
+        $this->genericDestroy($key, 'error_list');
+        $this->hasErrors = false;
         return $this;
     }
 
     /**
      * return serialized object data
      *
-     * @param boolean $skipObjects
+     * @param bool $skipObjects
      * @return string
      */
-    public function serialize($skipObjects = false)
+    public function serialize(bool $skipObjects = false): string
     {
-        $this->_prepareData();
-        $temporaryData  = $this->toArray();
-        $data           = '';
+        $this->prepareData();
+        $temporaryData = $this->toArray();
+        $data = '';
 
         if ($skipObjects) {
             $temporaryData = $this->traveler(
-                'self::_skipObject',
+                [$this, 'skipObject'],
                 null,
                 $temporaryData,
                 true
@@ -449,21 +464,44 @@ trait ContainerObject
         }
 
         try {
-            $data = Serializer::serialize($temporaryData);
+            $data = $this->serializeAdapter($temporaryData);
         } catch (ExceptionInterface $exception) {
-            $this->_addException($exception);
+            $this->addException($exception);
         }
 
         return $data;
     }
 
     /**
-     * allow to set data from serialized string with keep original data
-     * 
-     * @param string $string
+     * return object data from serialized string
+     *
+     * @param mixed $data
      * @return $this
      */
-    public function unserialize($string)
+    protected function serializeAdapter(mixed $data): string
+    {
+        return (new PhpSerialize())->serialize($data);
+    }
+
+    /**
+     * return object data from serialized string
+     *
+     * @param string $data
+     * @return mixed
+     */
+    protected function unserializeAdapter(string $data): mixed
+    {
+        return (new PhpSerialize())->unserialize($data);
+    }
+
+    /**
+     * allow to set data from serialized string with keep original data
+     *
+     * @param string $string
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
+     */
+    public function unserialize(string $string): self
     {
         return $this->appendSerialized($string);
     }
@@ -472,10 +510,10 @@ trait ContainerObject
      * return data for given key if exist in object, or all object data
      *
      * @param null|string $key
-     * @return mixed
+     * @return array
      * @deprecated
      */
-    public function getData($key = null)
+    public function getData(?string $key = null): array
     {
         return $this->toArray($key);
     }
@@ -483,23 +521,23 @@ trait ContainerObject
     /**
      * return data for given key if exist in object
      * or null if key was not found
-     * 
+     *
      * @param string|null $key
      * @return mixed
      */
-    public function get($key = null)
+    public function get(?string $key = null): mixed
     {
-        $this->_prepareData($key);
+        $this->prepareData($key);
         $data = null;
 
         if (is_null($key)) {
-            $data = $this->_DATA;
-        } elseif (array_key_exists($key, $this->_DATA)) {
-            $data = $this->_DATA[$key];
+            $data = $this->data;
+        } elseif (array_key_exists($key, $this->data)) {
+            $data = $this->data[$key];
         }
 
-        if ($this->_getPreparationOn) {
-            return $this->_dataPreparation($key, $data, $this->_dataRetrieveCallbacks);
+        if ($this->getPreparationOn) {
+            return $this->dataPreparation($key, $data, $this->dataRetrieveCallbacks);
         }
         return $data;
     }
@@ -510,10 +548,11 @@ trait ContainerObject
      *
      * @param string|array $key
      * @param mixed $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      * @deprecated
      */
-    public function setData($key, $data = null)
+    public function setData(string|array $key, mixed $data = null): self
     {
         return $this->set($key, $data);
     }
@@ -521,12 +560,13 @@ trait ContainerObject
     /**
      * set some data in object
      * can give pair key=>value or array of keys
-     * 
+     *
      * @param string|array $key
      * @param mixed $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function set($key, $data = null)
+    public function set(string|array $key, mixed $data = null): self
     {
         if (is_array($key)) {
             $this->appendArray($key);
@@ -544,18 +584,14 @@ trait ContainerObject
      * @param null|string $key
      * @return mixed
      */
-    public function returnOriginalData($key = null)
+    public function returnOriginalData(?string $key = null): mixed
     {
-        $this->_prepareData($key);
+        $this->prepareData($key);
 
-        $mergedData = array_merge($this->_DATA, $this->_originalDATA);
-        $data       = $this->_removeNewKeys($mergedData);
+        $mergedData = \array_merge($this->data, $this->originalData);
+        $data = $this->removeNewKeys($mergedData);
 
-        if (array_key_exists($key, $data)) {
-            return $data[$key];
-        }
-
-        return null;
+        return $data[$key] ?? null;
     }
 
     /**
@@ -566,20 +602,20 @@ trait ContainerObject
      * @return bool
      * @deprecated
      */
-    public function hasData($key = null)
+    public function hasData(?string $key = null): bool
     {
         return $this->has($key);
     }
 
     /**
      * check if data with given key exist in object, or object has some data
-     * 
+     *
      * @param string $key
      * @return bool
      */
-    public function has($key)
+    public function has(string $key): bool
     {
-        if (array_key_exists($key, $this->_DATA)) {
+        if (\array_key_exists($key, $this->data)) {
             return true;
         }
 
@@ -595,91 +631,57 @@ trait ContainerObject
      * if return null, comparator symbol was wrong
      *
      * @param mixed $dataToCheck
-     * @param array|string|\Closure $operator
+     * @param array|string|Closure $operator
      * @param string|null $key
-     * @param boolean $origin
+     * @param bool $origin
      * @return bool|null
      */
-    public function compareData($dataToCheck, $key = null, $operator = '===', $origin = null)
+    public function compareData(mixed $dataToCheck, ?string $key = null, array|string|Closure $operator = '===', bool $origin = false): ?bool
     {
         if ($origin) {
-            $mergedData = array_merge($this->_DATA, $this->_originalDATA);
-            $data       = $this->_removeNewKeys($mergedData);
+            $mergedData = \array_merge($this->data, $this->originalData);
+            $data = $this->removeNewKeys($mergedData);
         } else {
-            $data = $this->_DATA;
+            $data = $this->data;
         }
 
         if ($dataToCheck instanceof Container) {
             $dataToCheck = $dataToCheck->toArray();
         }
 
-        if (is_callable($operator)) {
-            return call_user_func_array($operator, [$key, $dataToCheck, $data, $this]);
+        if (\is_callable($operator)) {
+            return $operator($key, $dataToCheck, $data, $this);
         }
 
-        switch (true) {
-            case is_null($key):
-                return $this->_comparator($dataToCheck, $data, $operator);
-            // no break, always will return boolean value
-
-            case array_key_exists($key, $data):
-                return $this->_comparator($dataToCheck, $data[$key], $operator);
-            // no break, always will return boolean value
-
-            default:
-                return false;
-            // no break, always will return boolean value
-        }
+        return match (true) {
+            \is_null($key) => $this->comparator($dataToCheck, $data, $operator),
+            \array_key_exists($key, $data) => $this->comparator($dataToCheck, $data[$key], $operator),
+            default => false,
+        };
     }
 
     /**
      * allow to compare data with given operator
-     * 
+     *
      * @param mixed $dataOrigin
      * @param mixed $dataCheck
      * @param string $operator
      * @return bool|null
      */
-    protected function _comparator($dataOrigin, $dataCheck, $operator)
+    protected function comparator(mixed $dataOrigin, mixed $dataCheck, string $operator): ?bool
     {
-        switch ($operator) {
-            case '===':
-                return $dataOrigin === $dataCheck;
-            // no break, always will return boolean value
-
-            case '!==':
-                return $dataOrigin !== $dataCheck;
-            // no break, always will return boolean value
-
-            case '==':
-                return $dataOrigin == $dataCheck;
-            // no break, always will return boolean value
-
-            case '!=':
-            case '<>':
-                return $dataOrigin != $dataCheck;
-            // no break, always will return boolean value
-
-            case '<':
-                return $dataOrigin < $dataCheck;
-            // no break, always will return boolean value
-
-            case '>':
-                return $dataOrigin > $dataCheck;
-            // no break, always will return boolean value
-
-            case '<=':
-                return $dataOrigin <= $dataCheck;
-            // no break, always will return boolean value
-
-            case '>=':
-                return $dataOrigin >= $dataCheck;
-            // no break, always will return boolean value
-
-            default:
-                return null;
-            // no break, always will return boolean value
-        }
+        return match ($operator) {
+            '===' => $dataOrigin === $dataCheck,
+            '!==' => $dataOrigin !== $dataCheck,
+            '==' => $dataOrigin == $dataCheck,
+            '!=', '<>' => $dataOrigin != $dataCheck,
+            '<' => $dataOrigin < $dataCheck,
+            '>' => $dataOrigin > $dataCheck,
+            '<=' => $dataOrigin <= $dataCheck,
+            '>=' => $dataOrigin >= $dataCheck,
+            '<=>' => $dataOrigin <=> $dataCheck,
+            default => null,
+        };
     }
 
     /**
@@ -687,10 +689,10 @@ trait ContainerObject
      * automatically set data to original array
      *
      * @param string|null $key
-     * @return $this
+     * @return ContainerObject|Container
      * @deprecated
      */
-    public function unsetData($key = null)
+    public function unsetData(?string $key = null): self
     {
         return $this->destroy($key);
     }
@@ -698,28 +700,28 @@ trait ContainerObject
     /**
      * destroy key entry in object data, or whole keys
      * automatically set data to original array
-     * 
+     *
      * @param string|null $key
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function destroy($key = null)
+    public function destroy(?string $key = null): self
     {
-        if (is_null($key)) {
-            $this->_dataChanged  = true;
-            $mergedData          = array_merge($this->_DATA, $this->_originalDATA);
-            $this->_originalDATA = $this->_removeNewKeys($mergedData);
-            $this->_DATA         = [];
+        if (\is_null($key)) {
+            $this->dataChanged  = true;
+            $mergedData = \array_merge($this->data, $this->originalData);
+            $this->originalData = $this->removeNewKeys($mergedData);
+            $this->data = [];
 
-        } elseif (array_key_exists($key, $this->_DATA)) {
-            $this->_dataChanged = true;
+        } elseif (\array_key_exists($key, $this->data)) {
+            $this->dataChanged = true;
 
-            if (!array_key_exists($key, $this->_originalDATA)
-                && !array_key_exists($key, $this->_newKeys)
+            if (!\array_key_exists($key, $this->originalData)
+                && !\array_key_exists($key, $this->newKeys)
             ) {
-                $this->_originalDATA[$key] = $this->_DATA[$key];
+                $this->originalData[$key] = $this->data[$key];
             }
 
-            unset ($this->_DATA[$key]);
+            unset ($this->data[$key]);
         }
 
         return $this;
@@ -729,23 +731,25 @@ trait ContainerObject
      * set object key data to null
      *
      * @param string $key
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      * @deprecated
      */
-    public function clearData($key)
+    public function clearData(string $key): self
     {
         return $this->clear($key);
     }
 
     /**
      * set object key data to null
-     * 
+     *
      * @param string $key
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function clear($key)
+    public function clear(string $key): self
     {
-        $this->_putData($key, null);
+        $this->putData($key, null);
         return $this;
     }
 
@@ -754,10 +758,10 @@ trait ContainerObject
      * set data changed to false only if restore whole data
      *
      * @param string|null $key
-     * @return $this
+     * @return ContainerObject|Container
      * @deprecated
      */
-    public function restoreData($key = null)
+    public function restoreData(?string $key = null): self
     {
         return $this->restore($key);
     }
@@ -767,19 +771,17 @@ trait ContainerObject
      * set data changed to false only if restore whole data
      *
      * @param string|null $key
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function restore($key = null)
+    public function restore(?string $key = null): self
     {
-        if (is_null($key)) {
-            $mergedData         = array_merge($this->_DATA, $this->_originalDATA);
-            $this->_DATA        = $this->_removeNewKeys($mergedData);
-            $this->_dataChanged = false;
-            $this->_newKeys     = [];
-        } else {
-            if (array_key_exists($key, $this->_originalDATA)) {
-                $this->_DATA[$key] = $this->_originalDATA[$key];
-            }
+        if (\is_null($key)) {
+            $mergedData = \array_merge($this->data, $this->originalData);
+            $this->data = $this->removeNewKeys($mergedData);
+            $this->dataChanged = false;
+            $this->newKeys = [];
+        } elseif (\array_key_exists($key, $this->originalData)) {
+            $this->data[$key] = $this->originalData[$key];
         }
 
         return $this;
@@ -788,13 +790,13 @@ trait ContainerObject
     /**
      * all data stored in object became original data
      *
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function replaceDataArrays()
+    public function replaceDataArrays(): self
     {
-        $this->_originalDATA = [];
-        $this->_dataChanged  = false;
-        $this->_newKeys      = [];
+        $this->originalData = [];
+        $this->dataChanged = false;
+        $this->newKeys = [];
         return $this;
     }
 
@@ -802,38 +804,38 @@ trait ContainerObject
      * return object as string
      * each data value separated by coma
      *
-     * @param string $separator
+     * @param string|null $separator
      * @return string
      */
-    public function toString($separator = null)
+    public function toString(?string $separator = null): string
     {
-        if (!is_null($separator)) {
-            $this->_separator = $separator;
+        if (!\is_null($separator)) {
+            $this->separator = $separator;
         }
 
-        $this->_prepareData();
+        $this->prepareData();
         return $this->__toString();
     }
 
     /**
      * return current separator
-     * 
+     *
      * @return string
      */
-    public function returnSeparator()
+    public function returnSeparator(): string
     {
-        return $this->_separator;
+        return $this->separator;
     }
 
     /**
      * allow to change default separator
-     * 
+     *
      * @param string $separator
-     * @return Object
+     * @return ContainerObject|Container
      */
-    public function changeSeparator($separator)
+    public function changeSeparator(string $separator): self
     {
-        $this->_separator = $separator;
+        $this->separator = $separator;
         return $this;
     }
 
@@ -841,28 +843,30 @@ trait ContainerObject
      * return data as json string
      *
      * @return string
+     * @throws \JsonException
      */
-    public function toJson()
+    public function toJson(): string
     {
-        $this->_prepareData();
-        return json_encode($this->toArray());
+        $this->prepareData();
+        return \json_encode($this->toArray(), JSON_THROW_ON_ERROR);
     }
 
     /**
      * return object data as xml representation
      *
      * @param bool $addCdata
-     * @param string|boolean $dtd
+     * @param string|bool $dtd
      * @param string $version
      * @return string
+     * @throws DOMException
      */
-    public function toXml($addCdata = true, $dtd = false, $version = '1.0')
+    public function toXml(bool $addCdata = true, string|bool$dtd = false, string $version = '1.0'): string
     {
-        $this->_prepareData();
+        $this->prepareData();
 
-        $xml    = new Xml(['version' => $version]);
-        $root   = $xml->createElement('root');
-        $xml    = $this->_arrayToXml($this->toArray(), $xml, $addCdata, $root);
+        $xml = new Xml(['version' => $version]);
+        $root = $xml->createElement('root');
+        $xml = $this->arrayToXml($this->toArray(), $xml, $addCdata, $root);
 
         $xml->appendChild($root);
 
@@ -871,11 +875,11 @@ trait ContainerObject
         }
 
         $xml->formatOutput = true;
-        $xmlData = $xml->saveXmlFile(false, true);
+        $xmlData = $xml->saveXmlFile(false);
 
         if ($xml->hasErrors()) {
-            $this->_hasErrors       = true;
-            $this->_errorsList[]    = $xml->getError();
+            $this->hasErrors = true;
+            $this->errorsList[] = $xml->getError();
             return false;
         }
 
@@ -884,12 +888,12 @@ trait ContainerObject
 
     /**
      * return object as stdClass
-     * 
+     *
      * @return stdClass
      */
-    public function toStdClass()
+    public function toStdClass(): stdClass
     {
-        $this->_prepareData();
+        $this->prepareData();
         $data = new stdClass();
 
         foreach ($this->toArray() as $key => $val) {
@@ -905,7 +909,7 @@ trait ContainerObject
      * @param string|null $key
      * @return mixed
      */
-    public function toArray($key = null)
+    public function toArray(?string $key = null): mixed
     {
         return $this->get($key);
     }
@@ -915,9 +919,9 @@ trait ContainerObject
      *
      * @return bool
      */
-    public function dataChanged()
+    public function dataChanged(): bool
     {
-        return $this->_dataChanged;
+        return $this->dataChanged;
     }
 
     /**
@@ -926,10 +930,10 @@ trait ContainerObject
      * @param string $key
      * @return bool
      */
-    public function keyDataChanged($key)
+    public function keyDataChanged(string $key): bool
     {
-        $data           = $this->toArray($key);
-        $originalData   = $this->returnOriginalData($key);
+        $data = $this->toArray($key);
+        $originalData = $this->returnOriginalData($key);
 
         return $data !== $originalData;
     }
@@ -937,29 +941,29 @@ trait ContainerObject
     /**
      * allow to use given method or function for all data inside of object
      *
-     * @param array|string|\Closure $function
+     * @param array|string|Closure $function
      * @param mixed $methodAttributes
      * @param mixed $data
      * @param bool $recursive
      * @return array|null
      */
     public function traveler(
-        $function,
-        $methodAttributes = null,
-        $data = null,
-        $recursive = false
-    ) {
+        array|string|Closure $function,
+        mixed $methodAttributes = null,
+        mixed $data = null,
+        bool $recursive = false
+    ): ?array {
         if (!$data) {
-            $data =& $this->_DATA;
+            $data =& $this->data;
         }
 
         foreach ($data as $key => $value) {
-            $isRecursive = is_array($value) && $recursive;
+            $isRecursive = \is_array($value) && $recursive;
 
             if ($isRecursive) {
-                $data[$key] = $this->_recursiveTraveler($function, $methodAttributes, $value);
+                $data[$key] = $this->recursiveTraveler($function, $methodAttributes, $value);
             } else {
-                $data[$key] = $this->_callUserFunction($function, $key, $value, $methodAttributes);
+                $data[$key] = $this->callUserFunction($function, $key, $value, $methodAttributes);
             }
         }
 
@@ -971,16 +975,16 @@ trait ContainerObject
      *
      * @param mixed $methodAttributes
      * @param mixed $data
-     * @param array|string|\Closure $function
+     * @param array|string|Closure $function
      * @return mixed
      */
-    protected function _recursiveTraveler($function, $methodAttributes, $data)
+    protected function recursiveTraveler(mixed $function, mixed $methodAttributes, array|string|Closure $data): mixed
     {
         foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $data[$key] = $this->_recursiveTraveler($function, $methodAttributes, $value);
+            if (\is_array($value)) {
+                $data[$key] = $this->recursiveTraveler($function, $methodAttributes, $value);
             } else {
-                $data[$key] = $this->_callUserFunction($function, $key, $value, $methodAttributes);
+                $data[$key] = $this->callUserFunction($function, $key, $value, $methodAttributes);
             }
         }
 
@@ -990,16 +994,16 @@ trait ContainerObject
     /**
      * run given function, method or closure on given data
      *
-     * @param array|string|\Closure $function
+     * @param array|string|Closure $function
      * @param string $key
      * @param mixed $value
      * @param mixed $attributes
      * @return mixed
      */
-    protected function _callUserFunction($function, $key, $value, $attributes)
+    protected function callUserFunction(array|string|Closure $function, string $key, mixed $value, mixed $attributes): mixed
     {
         if (is_callable($function)) {
-            return call_user_func_array($function, [$key, $value, $this, $attributes]);
+            return $function($key, $value, $this, $attributes);
         }
 
         return $value;
@@ -1008,10 +1012,11 @@ trait ContainerObject
     /**
      * allow to join two blue objects into one
      *
-     * @param \BlueContainer\Container $object
-     * @return $this
+     * @param Container $object
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function mergeBlueObject(Container $object)
+    public function mergeBlueObject(Container $object): self
     {
         $newData = $object->toArray();
 
@@ -1019,7 +1024,7 @@ trait ContainerObject
             $this->appendData($key, $value);
         }
 
-        $this->_dataChanged = true;
+        $this->dataChanged = true;
         return $this;
     }
 
@@ -1029,9 +1034,9 @@ trait ContainerObject
      * @param array $data
      * @return array
      */
-    protected function _removeNewKeys(array $data)
+    protected function removeNewKeys(array $data): array
     {
-        foreach ($this->_newKeys as $key) {
+        foreach ($this->newKeys as $key) {
             unset($data[$key]);
         }
         return $data;
@@ -1039,13 +1044,13 @@ trait ContainerObject
 
     /**
      * clear some data after creating new object with data
-     * 
-     * @return $this
+     *
+     * @return ContainerObject|Container
      */
-    protected function _afterAppendDataToNewObject()
+    protected function afterAppendDataToNewObject(): self
     {
-        $this->_dataChanged     = false;
-        $this->_newKeys         = [];
+        $this->dataChanged = false;
+        $this->newKeys = [];
 
         return $this;
     }
@@ -1054,23 +1059,24 @@ trait ContainerObject
      * apply given json data as object data
      *
      * @param string $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendJson($data)
+    public function appendJson(string $data): self
     {
-        $jsonData = json_decode($data, true);
-
-        if (is_null($jsonData)) {
-            $this->_errorsList['json_decode'] = 'Json cannot be decoded.';
-            $this->_hasErrors = true;
+        try {
+            $jsonData = \json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            $this->addException($exception);
             return $this;
         }
 
         $this->appendArray($jsonData);
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
+
         return $this;
     }
 
@@ -1078,18 +1084,24 @@ trait ContainerObject
      * apply given xml data as object data
      *
      * @param $data string
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendSimpleXml($data)
+    public function appendSimpleXml(string $data): self
     {
-        $loadedXml      = simplexml_load_string($data);
-        $jsonXml        = json_encode($loadedXml);
-        $jsonData       = json_decode($jsonXml, true);
+        try {
+            $loadedXml = \simplexml_load_string($data);
+            $jsonXml = \json_encode($loadedXml, JSON_THROW_ON_ERROR);
+            $jsonData = \json_decode($jsonXml, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            $this->addException($exception);
+            return $this;
+        }
 
         $this->appendArray($jsonData);
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
         return $this;
     }
@@ -1099,30 +1111,32 @@ trait ContainerObject
      * also handling attributes
      *
      * @param $data string
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendXml($data)
+    public function appendXml(string $data): self
     {
-        $xml                        = new Xml();
-        $xml->preserveWhiteSpace    = false;
-        $bool                       = @$xml->loadXML($data);
+        $xml = new Xml();
+        $xml->preserveWhiteSpace = false;
+        $bool = @$xml->loadXML($data);
 
         if (!$bool) {
-            $this->_errorsList['xml_load_error']    = $data;
-            $this->_hasErrors                       = true;
+            $this->errorsList['xml_load_error'] = $data;
+            $this->hasErrors = true;
             return $this;
         }
 
         try {
-            $temp = $this->_xmlToArray($xml->documentElement);
+            $temp = $this->xmlToArray($xml->documentElement);
             $this->appendArray($temp);
         } catch (DOMException $exception) {
-            $this->_addException($exception);
+            $this->addException($exception);
         }
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
+
         return $this;
     }
 
@@ -1132,21 +1146,21 @@ trait ContainerObject
      * @param DOMElement $data
      * @return array
      */
-    protected function _xmlToArray(DOMElement $data)
+    protected function xmlToArray(DOMElement $data): array
     {
         $temporaryData = [];
 
         /** @var $node DOMElement */
         foreach ($data->childNodes as $node) {
-            $nodeName           = $this->_stringToIntegerKey($node->nodeName);
-            $nodeData           = [];
-            $unSerializedData   = [];
+            $nodeName = $this->stringToIntegerKey($node->nodeName);
+            $nodeData = [];
+            $unSerializedData = [];
 
             if ($node->hasAttributes() && $node->getAttribute('serialized_object')) {
                 try {
-                    $unSerializedData = Serializer::unserialize($node->nodeValue);
+                    $unSerializedData = $this->unserializeAdapter($node->nodeValue);
                 } catch (ExceptionInterface $exception) {
-                    $this->_addException($exception);
+                    $this->addException($exception);
                 }
 
                 $temporaryData[$nodeName] = $unSerializedData;
@@ -1165,7 +1179,7 @@ trait ContainerObject
                 /** @var $childNode DOMElement */
                 foreach ($node->childNodes as $childNode) {
                     if ($childNode->nodeType === 1) {
-                        $childNodesData = $this->_xmlToArray($node);
+                        $childNodesData = $this->xmlToArray($node);
                     }
                 }
 
@@ -1192,38 +1206,40 @@ trait ContainerObject
      * remove prefix from integer array key
      *
      * @param string $key
-     * @return string|integer
+     * @return string|int
      */
-    protected function _stringToIntegerKey($key)
+    protected function stringToIntegerKey(string $key): int|string
     {
-        return str_replace($this->_integerKeyPrefix, '', $key);
+        return \str_replace($this->integerKeyPrefix, '', $key);
     }
 
     /**
      * return set up integer key prefix value
-     * 
+     *
      * @return string
      */
-    public function returnIntegerKeyPrefix()
+    public function returnIntegerKeyPrefix(): string
     {
-        return $this->_integerKeyPrefix;
+        return $this->integerKeyPrefix;
     }
 
     /**
-     * allow to set array in object or some other value 
+     * allow to set array in object or some other value
      *
      * @param array $arrayData
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendArray(array $arrayData)
+    public function appendArray(array $arrayData): self
     {
         foreach ($arrayData as $dataKey => $data) {
-            $this->_putData($dataKey, $data);
+            $this->putData($dataKey, $data);
         }
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
+
         return $this;
     }
 
@@ -1232,15 +1248,17 @@ trait ContainerObject
      *
      * @param array|string $key
      * @param mixed $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendData($key, $data)
+    public function appendData(array|string $key, mixed $data): self
     {
-        $this->_putData($key, $data);
+        $this->putData($key, $data);
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
+
         return $this;
     }
 
@@ -1248,15 +1266,17 @@ trait ContainerObject
      * get class variables and set them as data
      *
      * @param stdClass $class
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendStdClass(stdClass $class)
+    public function appendStdClass(stdClass $class): self
     {
-        $this->appendArray(get_object_vars($class));
+        $this->appendArray(\get_object_vars($class));
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
+
         return $this;
     }
 
@@ -1265,44 +1285,47 @@ trait ContainerObject
      * if data is an object set one variable where key is an object class name
      *
      * @param mixed $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendSerialized($data)
+    public function appendSerialized(mixed $data): self
     {
         try {
-            $data = Serializer::unserialize($data);
+            $data = $this->unserializeAdapter($data);
         } catch (ExceptionInterface $exception) {
-            $this->_addException($exception);
+            $this->addException($exception);
         }
 
-        if (is_object($data)) {
-            $name = $this->_convertKeyNames(get_class($data));
+        if (\is_object($data)) {
+            $name = $this->convertKeyNames(\get_class($data));
             $this->appendData($name, $data);
-        } elseif (is_array($data)) {
+        } elseif (\is_array($data)) {
             $this->appendArray($data);
         } else {
-            $this->appendData($this->_defaultDataName, $data);
+            $this->appendData($this->defaultDataName, $data);
         }
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
+
         return $this;
     }
 
     /**
      * allow to set ini data into object
-     * 
+     *
      * @param string $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendIni($data)
+    public function appendIni(string $data): self
     {
-        $array = parse_ini_string($data, $this->_processIniSection, INI_SCANNER_RAW);
+        $array = \parse_ini_string($data, $this->processIniSection, INI_SCANNER_RAW);
 
         if ($array === false) {
-            $this->_hasErrors = true;
-            $this->_errorsList[] = 'parse_ini_string';
+            $this->hasErrors = true;
+            $this->errorsList[] = 'parse_ini_string';
             return $this;
         }
 
@@ -1312,37 +1335,37 @@ trait ContainerObject
 
     /**
      * return information about ini section processing
-     * 
+     *
      * @return bool
      */
-    public function returnProcessIniSection()
+    public function returnProcessIniSection(): bool
     {
-        return $this->_processIniSection;
+        return $this->processIniSection;
     }
 
     /**
      * enable or disable ini section processing
-     * 
+     *
      * @param bool $bool
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function processIniSection($bool)
+    public function processIniSection(bool $bool): self
     {
-        $this->_processIniSection = $bool;
+        $this->processIniSection = $bool;
         return $this;
     }
 
     /**
      * export object as ini string
-     * 
+     *
      * @return string
      */
-    public function toIni()
+    public function toIni(): string
     {
         $ini = '';
 
         foreach ($this->toArray() as $key => $iniRow) {
-            $this->_appendIniData($ini, $key, $iniRow);
+            $this->appendIniData($ini, $key, $iniRow);
         }
 
         return $ini;
@@ -1350,14 +1373,14 @@ trait ContainerObject
 
     /**
      * append ini data to string
-     * 
+     *
      * @param string $ini
      * @param string $key
      * @param mixed $iniRow
      */
-    protected function _appendIniData(&$ini, $key, $iniRow)
+    protected function appendIniData(string &$ini, string $key, mixed $iniRow): void
     {
-        if ($this->_processIniSection && is_array($iniRow)) {
+        if ($this->processIniSection && is_array($iniRow)) {
             $ini .= '[' . $key . ']' . "\n";
             foreach ($iniRow as $rowKey => $rowData) {
                 $ini .= $rowKey . ' = ' . $rowData . "\n";
@@ -1369,30 +1392,31 @@ trait ContainerObject
 
     /**
      * allow to set csv data into object
-     * 
+     *
      * @param string $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    public function appendCsv($data)
+    public function appendCsv(string $data): self
     {
-        $counter    = 0;
-        $rows       = str_getcsv($data, $this->_csvLineDelimiter);
+        $counter = 0;
+        $rows = \str_getcsv($data, $this->csvLineDelimiter);
 
         foreach ($rows as $row) {
-            $rowData = str_getcsv(
+            $rowData = \str_getcsv(
                 $row,
-                $this->_csvDelimiter,
-                $this->_csvEnclosure,
-                $this->_csvEscape
+                $this->csvDelimiter,
+                $this->csvEnclosure,
+                $this->csvEscape
             );
 
-            $this->_putData($this->_integerKeyPrefix . $counter, $rowData);
+            $this->putData($this->integerKeyPrefix . $counter, $rowData);
 
             $counter++;
         }
 
-        if ($this->_objectCreation) {
-            return $this->_afterAppendDataToNewObject();
+        if ($this->objectCreation) {
+            return $this->afterAppendDataToNewObject();
         }
 
         return $this;
@@ -1401,56 +1425,56 @@ trait ContainerObject
     /**
      * @return string
      */
-    public function returnCsvDelimiter()
+    public function returnCsvDelimiter(): string
     {
-        return $this->_csvDelimiter;
+        return $this->csvDelimiter;
     }
 
     /**
      * @return string
      */
-    public function returnCsvEnclosure()
+    public function returnCsvEnclosure(): string
     {
-        return $this->_csvEnclosure;
+        return $this->csvEnclosure;
     }
 
     /**
      * @return string
      */
-    public function returnCsvEscape()
+    public function returnCsvEscape(): string
     {
-        return $this->_csvEscape;
+        return $this->csvEscape;
     }
 
     /**
      * @return string
      */
-    public function returnCsvLineDelimiter()
+    public function returnCsvLineDelimiter(): string
     {
-        return $this->_csvLineDelimiter;
+        return $this->csvLineDelimiter;
     }
 
     /**
      * change delimiter for csv row data (give only one character)
-     * 
+     *
      * @param string $char
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function changeCsvDelimiter($char)
+    public function changeCsvDelimiter(string $char): self
     {
-        $this->_csvDelimiter = $char;
+        $this->csvDelimiter = $char;
         return $this;
     }
 
     /**
      * change enclosure for csv row data (give only one character)
-     * 
+     *
      * @param string $char
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function changeCsvEnclosure($char)
+    public function changeCsvEnclosure(string $char): self
     {
-        $this->_csvEnclosure = $char;
+        $this->csvEnclosure = $char;
         return $this;
     }
 
@@ -1458,11 +1482,11 @@ trait ContainerObject
      * change data escape for csv row data (give only one character)
      *
      * @param string $char
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function changeCsvEscape($char)
+    public function changeCsvEscape(string $char): self
     {
-        $this->_csvEscape = $char;
+        $this->csvEscape = $char;
         return $this;
     }
 
@@ -1470,34 +1494,34 @@ trait ContainerObject
      * change data row delimiter (give only one character)
      *
      * @param string $char
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function changeCsvLineDelimiter($char)
+    public function changeCsvLineDelimiter(string $char): self
     {
-        $this->_csvLineDelimiter = $char;
+        $this->csvLineDelimiter = $char;
         return $this;
     }
 
     /**
      * export object as csv data
-     * 
+     *
      * @return string
      */
-    public function toCsv()
+    public function toCsv(): string
     {
         $csv = '';
 
         foreach ($this->toArray() as $csvRow) {
-            if (is_array($csvRow)) {
-                $data = implode($this->_csvDelimiter, $csvRow);
+            if (\is_array($csvRow)) {
+                $data = \implode($this->csvDelimiter, $csvRow);
             } else {
                 $data = $csvRow;
             }
 
-            $csv .= $data . $this->_csvLineDelimiter;
+            $csv .= $data . $this->csvLineDelimiter;
         }
 
-        return rtrim($csv, $this->_csvLineDelimiter);
+        return \rtrim($csv, $this->csvLineDelimiter);
     }
 
     /**
@@ -1505,28 +1529,27 @@ trait ContainerObject
      *
      * @param string $key
      * @param mixed $data
-     * @return $this
+     * @return ContainerObject|Container
+     * @throws \ReflectionException
      */
-    protected function _putData($key, $data)
+    protected function putData(string $key, mixed $data): self
     {
-        $bool = $this->_validateDataKey($key, $data);
+        $bool = $this->validateDataKey($key, $data);
         if (!$bool) {
             return $this;
         }
 
         $hasData = $this->has($key);
-        if ($this->_setPreparationOn) {
-            $data = $this->_dataPreparation(
+        if ($this->setPreparationOn) {
+            $data = $this->dataPreparation(
                 $key,
                 $data,
-                $this->_dataPreparationCallbacks
+                $this->dataPreparationCallbacks
             );
         }
 
-        if (!$hasData
-            || ($hasData && $this->_comparator($this->_DATA[$key], $data, '!=='))
-        ) {
-            $this->_changeData($key, $data, $hasData);
+        if (!$hasData || ($this->comparator($this->data[$key], $data, '!=='))) {
+            $this->changeData($key, $data, $hasData);
         }
 
         return $this;
@@ -1534,52 +1557,53 @@ trait ContainerObject
 
     /**
      * insert single key=>value pair into object, with key conversion
-     * and set _dataChanged to true
-     * also set original data for given key in $this->_originalDATA
-     * 
+     * and set dataChanged to true
+     * also set original data for given key in $this->originalData
+     *
      * @param string $key
      * @param mixed $data
      * @param bool $hasData
-     * @return $this
+     * @return ContainerObject|Container
      */
-    protected function _changeData($key, $data, $hasData)
+    protected function changeData(string $key, mixed $data, bool $hasData): self
     {
-        if (!array_key_exists($key, $this->_originalDATA)
+        if (!\array_key_exists($key, $this->originalData)
             && $hasData
-            && !array_key_exists($key, $this->_newKeys)
+            && !\array_key_exists($key, $this->newKeys)
         ) {
-            $this->_originalDATA[$key] = $this->_DATA[$key];
+            $this->originalData[$key] = $this->data[$key];
         } else {
-            $this->_newKeys[$key] = $key;
+            $this->newKeys[$key] = $key;
         }
 
-        $this->_dataChanged = true;
-        $this->_DATA[$key]  = $data;
+        $this->dataChanged = true;
+        $this->data[$key]  = $data;
 
         return $this;
     }
 
     /**
      * search validation rule for given key and check data
-     * 
+     *
      * @param string $key
      * @param mixed $data
      * @return bool
+     * @throws \ReflectionException
      */
-    protected function _validateDataKey($key, $data)
+    protected function validateDataKey(string $key, mixed $data): bool
     {
         $dataOkFlag = true;
 
-        if (!$this->_validationOn) {
-            return $dataOkFlag;
+        if (!$this->validationOn) {
+            return true;
         }
 
-        foreach ($this->_validationRules as $ruleKey => $ruleValue) {
+        foreach ($this->validationRules as $ruleKey => $ruleValue) {
             if (!preg_match($ruleKey, $key)) {
                 continue;
             }
 
-            $bool = $this->_validateData($ruleValue, $key, $data);
+            $bool = $this->validateData($ruleValue, $key, $data);
             if (!$bool) {
                 $dataOkFlag = false;
             }
@@ -1591,33 +1615,37 @@ trait ContainerObject
     /**
      * check data with given rule and set error information
      * allow to use method or function (must return true or false)
-     * 
-     * @param string|array|string|\Closure $rule
+     *
+     * @param string|array|Closure $rule
      * @param string $key
      * @param mixed $data
      * @return bool
+     * @throws \ReflectionException
      */
-    protected function _validateData($rule, $key, $data)
+    protected function validateData(string|array|Closure $rule, string $key, mixed $data): bool
     {
-        if (
-            (is_callable($rule) && call_user_func_array($rule, [$key, $data, $this]))
-            || @preg_match($rule, $data)
-        ) {
+        if (\is_callable($rule)) {
+            $validate = $rule($key, $data, $this);
+        } else {
+            $validate = \preg_match($rule, $data);
+        }
+
+        if ($validate) {
             return true;
         }
 
         if ($rule instanceof Closure) {
             $reflection = new ReflectionFunction($rule);
-            $rule       = $reflection->__toString();
+            $rule = $reflection->__toString();
         }
 
-        $this->_errorsList[] = [
-            'message'   => 'validation_mismatch',
-            'key'       => $key,
-            'data'      => $data,
-            'rule'      => $rule,
+        $this->errorsList[] = [
+            'message' => 'validation_mismatch',
+            'key' => $key,
+            'data' => $data,
+            'rule' => $rule,
         ];
-        $this->_hasErrors = true;
+        $this->hasErrors = true;
 
         return false;
     }
@@ -1629,40 +1657,41 @@ trait ContainerObject
      * @param string $key
      * @return string
      */
-    protected function _convertKeyNames($key)
+    protected function convertKeyNames(string $key): string
     {
-        if (array_key_exists($key, self::$_cacheKeys)) {
-            return self::$_cacheKeys[$key];
+        if (\array_key_exists($key, self::$cacheKeys)) {
+            return self::$cacheKeys[$key];
         }
 
-        $convertedKey = strtolower(
-            preg_replace('/(.)([A-Z0-9])/', "$1_$2", $key)
+        $convertedKey = \strtolower(
+            \preg_replace('/(.)([A-Z0-9])/', "$1_$2", $key)
         );
-        self::$_cacheKeys[$key] = $convertedKey;
+        self::$cacheKeys[$key] = $convertedKey;
+
         return $convertedKey;
     }
 
     /**
-     * recursive method to create structure xml structure of object DATA
+     * recursive method to create structure xml structure of object data
      *
      * @param $data
      * @param Xml $xml
-     * @param boolean $addCdata
-     * @param Xml|DOMElement $parent
+     * @param bool $addCdata
+     * @param DOMElement|Xml $parent
      * @return Xml
      */
-    protected function _arrayToXml($data, Xml $xml, $addCdata, $parent)
+    protected function arrayToXml($data, Xml $xml, bool $addCdata, DOMElement|Xml $parent): Xml
     {
         foreach ($data as $key => $value) {
-            $key        = str_replace(' ', '_', $key);
+            $key = \str_replace(' ', '_', $key);
             $attributes = [];
-            $data       = '';
+            $data = '';
 
-            if (is_object($value)) {
+            if (\is_object($value)) {
                 try {
-                    $data = Serializer::serialize($value);
+                    $data = $this->serializeAdapter($value);
                 } catch (ExceptionInterface $exception) {
-                    $this->_addException($exception);
+                    $this->addException($exception);
                 }
 
                 $value = [
@@ -1672,15 +1701,15 @@ trait ContainerObject
             }
 
             try {
-                $isArray = is_array($value);
+                $isArray = \is_array($value);
 
-                if ($isArray && array_key_exists('@attributes', $value)) {
+                if ($isArray && \array_key_exists('@attributes', $value)) {
                     $attributes = $value['@attributes'];
                     unset ($value['@attributes']);
                 }
 
                 if ($isArray) {
-                    $parent = $this->_convertArrayDataToXml(
+                    $parent = $this->convertArrayDataToXml(
                         $value,
                         $addCdata,
                         $xml,
@@ -1691,11 +1720,11 @@ trait ContainerObject
                     continue;
                 }
 
-                $element = $this->_appendDataToNode($addCdata, $xml, $key, $value);
+                $element = $this->appendDataToNode($addCdata, $xml, $key, $value);
                 $parent->appendChild($element);
 
             } catch (DOMException $exception) {
-                $this->_addException($exception);
+                $this->addException($exception);
             }
         }
 
@@ -1703,30 +1732,31 @@ trait ContainerObject
     }
 
     /**
-     * convert array DATA value to xml format and return as xml object
+     * convert array data value to xml format and return as xml object
      *
      * @param array|string $value
      * @param string $addCdata
      * @param Xml $xml
-     * @param string|integer $key
+     * @param int|string $key
      * @param DOMElement $parent
      * @param array $attributes
      * @return DOMElement
+     * @throws DOMException
      */
-    protected function _convertArrayDataToXml(
-        $value,
-        $addCdata,
+    protected function convertArrayDataToXml(
+        array|string $value,
+        string $addCdata,
         Xml $xml,
-        $key,
-        $parent,
+        int|string $key,
+        DOMElement $parent,
         array $attributes
-    ) {
-        $count      = count($value) === 1;
+    ): DOMElement {
+        $count = \count($value) === 1;
         $isNotEmpty = !empty($attributes);
-        $exist      = array_key_exists(0, $value);
+        $exist = \array_key_exists(0, $value);
 
         if ($count && $isNotEmpty && $exist) {
-            $children = $this->_appendDataToNode(
+            $children = $this->appendDataToNode(
                 $addCdata,
                 $xml,
                 $key,
@@ -1734,9 +1764,9 @@ trait ContainerObject
             );
         } else {
             $children = $xml->createElement(
-                $this->_integerToStringKey($key)
+                $this->integerToStringKey($key)
             );
-            $this->_arrayToXml($value, $xml, $addCdata, $children);
+            $this->arrayToXml($value, $xml, $addCdata, $children);
         }
         $parent->appendChild($children);
 
@@ -1746,26 +1776,28 @@ trait ContainerObject
 
         return $parent;
     }
+
     /**
      * append data to node
      *
      * @param string $addCdata
      * @param Xml $xml
-     * @param string|integer $key
+     * @param int|string $key
      * @param string $value
      * @return DOMElement
+     * @throws DOMException
      */
-    protected function _appendDataToNode($addCdata, Xml $xml, $key, $value)
+    protected function appendDataToNode(string $addCdata, Xml $xml, int|string $key, string $value): DOMElement
     {
         if ($addCdata) {
-            $cdata      = $xml->createCDATASection($value);
-            $element    = $xml->createElement(
-                $this->_integerToStringKey($key)
+            $cdata = $xml->createCdataSection($value);
+            $element = $xml->createElement(
+                $this->integerToStringKey($key)
             );
             $element->appendChild($cdata);
         } else {
             $element = $xml->createElement(
-                $this->_integerToStringKey($key),
+                $this->integerToStringKey($key),
                 $value
             );
         }
@@ -1774,18 +1806,18 @@ trait ContainerObject
     }
 
     /**
-     * if array key is number, convert it to string with set up _integerKeyPrefix
+     * if array key is number, convert it to string with set up integerKeyPrefix
      *
-     * @param string|integer $key
+     * @param int|string $key
      * @return string
      */
-    protected function _integerToStringKey($key)
+    protected function integerToStringKey(int|string $key): string
     {
-        if (is_numeric($key)) {
-            $key = $this->_integerKeyPrefix . $key;
+        if (\is_numeric($key)) {
+            $key = $this->integerKeyPrefix . $key;
         }
 
-        return $key;
+        return (string)$key;
     }
 
     /**
@@ -1793,12 +1825,12 @@ trait ContainerObject
      *
      * @param string $key
      * @param mixed $value
-     * @return string
+     * @return mixed
      */
-    protected function _skipObject($key, $value)
+    protected function skipObject(string $key, mixed $value): mixed
     {
-        if (is_object($value)) {
-            return $key . $this->_skippedObject;
+        if (\is_object($value)) {
+            return $key . $this->skippedObject;
         }
 
         return $value;
@@ -1806,54 +1838,54 @@ trait ContainerObject
 
     /**
      * set regular expression for key find and validate data
-     * 
-     * @param string $ruleKey
-     * @param string $ruleValue
-     * @return $this
+     *
+     * @param string|array|Closure $ruleKey
+     * @param string|null|Closure $ruleValue
+     * @return ContainerObject|Container
      */
-    public function putValidationRule($ruleKey, $ruleValue = null)
+    public function putValidationRule(string|array|Closure $ruleKey, null|string|Closure $ruleValue = null): self
     {
-        return $this->_genericPut($ruleKey, $ruleValue, 'validation');
+        return $this->genericPut($ruleKey, $ruleValue, 'validation');
     }
 
     /**
      * remove validation rule from list
-     * 
+     *
      * @param string|null $key
-     * @return $this
+     * @return ContainerObject|Container
      */
-    public function removeValidationRule($key = null)
+    public function removeValidationRule(?string $key = null): self
     {
-        return $this->_genericDestroy($key, 'validation');
+        return $this->genericDestroy($key, 'validation');
     }
 
     /**
      * return validation rule or all rules set in object
-     * 
-     * @param null|string $rule
+     *
+     * @param string|null $rule
      * @return mixed
      */
-    public function returnValidationRule($rule = null)
+    public function returnValidationRule(?string $rule = null): mixed
     {
-        return $this->_genericReturn($rule, 'validation');
+        return $this->genericReturn($rule, 'validation');
     }
 
     /**
      * common put data method for class data lists
-     * 
-     * @param string|array $key
+     *
+     * @param array|string $key
      * @param mixed $value
      * @param string $type
-     * @return $this
+     * @return ContainerObject|Container
      */
-    protected function _genericPut($key, $value, $type)
+    protected function genericPut(array|string $key, mixed $value, string $type): self
     {
-        $listName = $this->_getCorrectList($type);
+        $listName = $this->getCorrectList($type);
 
-        if (is_array($key)) {
-            $this->$listName = array_merge($this->$listName, $key);
+        if (\is_array($key)) {
+            $this->$listName = \array_merge($this->$listName, $key);
         } else {
-            $list       = &$this->$listName;
+            $list = &$this->$listName;
             $list[$key] = $value;
         }
 
@@ -1862,14 +1894,14 @@ trait ContainerObject
 
     /**
      * common destroy data method for class data lists
-     * 
-     * @param string $key
+     *
+     * @param string|null $key
      * @param string $type
-     * @return $this
+     * @return ContainerObject|Container
      */
-    protected function _genericDestroy($key, $type)
+    protected function genericDestroy(?string $key, string $type): self
     {
-        $listName = $this->_getCorrectList($type);
+        $listName = $this->getCorrectList($type);
 
         if ($key) {
             $list = &$this->$listName;
@@ -1882,20 +1914,20 @@ trait ContainerObject
 
     /**
      * common return data method for class data lists
-     * 
-     * @param string $key
+     *
+     * @param string|null $key
      * @param string $type
-     * @return mixed|null
+     * @return mixed
      */
-    protected function _genericReturn($key, $type)
+    protected function genericReturn(?string $key, string $type): mixed
     {
-        $listName = $this->_getCorrectList($type);
+        $listName = $this->getCorrectList($type);
 
         switch (true) {
             case !$key:
                 return $this->$listName;
 
-            case array_key_exists($key, $this->$listName):
+            case \array_key_exists($key, $this->$listName):
                 $list = &$this->$listName;
                 return $list[$key];
 
@@ -1906,52 +1938,40 @@ trait ContainerObject
 
     /**
      * return name of data list variable for given data type
-     * 
+     *
      * @param string $type
      * @return null|string
      */
-    protected function _getCorrectList($type)
+    protected function getCorrectList(string $type): ?string
     {
-        switch ($type) {
-            case 'error_list':
-                $type = '_errorsList';
-                break;
-
-            case 'validation':
-                $type = '_validationRules';
-                break;
-
-            case 'preparation_callback':
-                $type = '_dataPreparationCallbacks';
-                break;
-
-            case 'return_callback':
-                $type = '_dataRetrieveCallbacks';
-                break;
-        }
-
-        return $type;
+        return match ($type) {
+            'error_list' => 'errorsList',
+            'validation' => 'validationRules',
+            'preparation_callback' => 'dataPreparationCallbacks',
+            'return_callback' => 'dataRetrieveCallbacks',
+            default => $type
+        };
     }
 
     /**
      * return data formatted by given function
      *
-     * @param string $key
+     * @param string|null $key
      * @param mixed $data
      * @param array $rulesList
      * @return mixed
      */
-    protected function _dataPreparation($key, $data, array $rulesList)
+    protected function dataPreparation(?string $key, mixed $data, array $rulesList): mixed
     {
         foreach ($rulesList as $ruleKey => $function) {
 
             switch (true) {
-                case is_null($key):
-                    $data = $this->_prepareWholeData($ruleKey, $data, $function);
+                case \is_null($key):
+                    $data = $this->prepareWholeData($ruleKey, $data, $function);
                     break;
 
-                case preg_match($ruleKey, $key) && !is_null($key):
-                    $data = $this->_callUserFunction($function, $key, $data, null);
+                case \preg_match($ruleKey, $key) && !\is_null($key):
+                    $data = $this->callUserFunction($function, $key, $data, null);
                     break;
 
                 default:
@@ -1967,14 +1987,14 @@ trait ContainerObject
      *
      * @param string $ruleKey
      * @param array $data
-     * @param array|string|\Closure $function
+     * @param array|string|Closure $function
      * @return array
      */
-    protected function _prepareWholeData($ruleKey, array $data, $function)
+    protected function prepareWholeData(string $ruleKey, array $data, array|string|Closure $function): array
     {
         foreach ($data as $key => $value) {
-            if (preg_match($ruleKey, $key)) {
-                $data[$key] = $this->_callUserFunction($function, $key, $value, null);
+            if (\preg_match($ruleKey, $key)) {
+                $data[$key] = $this->callUserFunction($function, $key, $value, null);
             }
         }
 
@@ -1983,257 +2003,253 @@ trait ContainerObject
 
     /**
      * set regular expression for key find and validate data
-     * 
-     * @param string $ruleKey
-     * @param callable $ruleValue
-     * @return $this
+     *
+     * @param string|array $ruleKey
+     * @param callable|null $ruleValue
+     * @return Container|ContainerObject
      */
-    public function putPreparationCallback($ruleKey, callable $ruleValue = null)
+    public function putPreparationCallback(string|array $ruleKey, callable $ruleValue = null): self
     {
-        return $this->_genericPut($ruleKey, $ruleValue, 'preparation_callback');
+        return $this->genericPut($ruleKey, $ruleValue, 'preparation_callback');
     }
 
     /**
      * remove validation rule from list
-     * 
+     *
      * @param string|null $key
-     * @return $this
+     * @return Container|ContainerObject
      */
-    public function removePreparationCallback($key = null)
+    public function removePreparationCallback(?string $key = null): self
     {
-        return $this->_genericDestroy($key, 'preparation_callback');
+        return $this->genericDestroy($key, 'preparation_callback');
     }
 
     /**
      * return validation rule or all rules set in object
-     * 
-     * @param null|string $rule
+     *
+     * @param string|null $rule
      * @return mixed
      */
-    public function returnPreparationCallback($rule = null)
+    public function returnPreparationCallback(?string $rule = null): mixed
     {
-        return $this->_genericReturn($rule, 'preparation_callback');
+        return $this->genericReturn($rule, 'preparation_callback');
     }
 
     /**
      * set regular expression for key find and validate data
-     * 
-     * @param string $ruleKey
-     * @param callable $ruleValue
-     * @return $this
+     *
+     * @param string|array $ruleKey
+     * @param callable|null $ruleValue
+     * @return Container|ContainerObject
      */
-    public function putReturnCallback($ruleKey, callable $ruleValue = null)
+    public function putReturnCallback(string|array $ruleKey, callable $ruleValue = null): self
     {
-        return $this->_genericPut($ruleKey, $ruleValue, 'return_callback');
+        return $this->genericPut($ruleKey, $ruleValue, 'return_callback');
     }
 
     /**
      * remove validation rule from list
-     * 
+     *
      * @param string|null $key
-     * @return $this
+     * @return Container|ContainerObject
      */
-    public function removeReturnCallback($key = null)
+    public function removeReturnCallback(?string $key = null): self
     {
-        return $this->_genericDestroy($key, 'return_callback');
+        return $this->genericDestroy($key, 'return_callback');
     }
 
     /**
      * return validation rule or all rules set in object
-     * 
-     * @param null|string $rule
+     *
+     * @param string|null $rule
      * @return mixed
      */
-    public function returnReturnCallback($rule = null)
+    public function returnReturnCallback(?string $rule = null): mixed
     {
-        return $this->_genericReturn($rule, 'return_callback');
+        return $this->genericReturn($rule, 'return_callback');
     }
 
     /**
      * check that data for given key exists
-     * 
-     * @param string $offset
+     *
+     * @param mixed $offset
      * @return bool
      */
-    public function offsetExists($offset)
+    public function offsetExists(mixed $offset): bool
     {
         return $this->has($offset);
     }
 
     /**
      * return data for given key
-     * 
-     * @param string $offset
+     *
+     * @param mixed $offset
      * @return mixed
      */
-    public function offsetGet($offset)
+    public function offsetGet(mixed $offset): mixed
     {
         return $this->toArray($offset);
     }
 
     /**
      * set data for given key
-     * 
+     *
      * @param string|null $offset
      * @param mixed $value
-     * @return $this
+     * @throws \ReflectionException
      */
-    public function offsetSet($offset, $value)
+    public function offsetSet(mixed $offset, mixed $value): void
     {
-        if (is_null($offset)) {
-            $offset = $this->_integerToStringKey($this->_integerKeysCounter++);
+        if (\is_null($offset)) {
+            $offset = $this->integerToStringKey($this->integerKeysCounter++);
         }
 
-        $this->_putData($offset, $value);
-        return $this;
+        $this->putData($offset, $value);
     }
 
     /**
      * remove data for given key
-     * 
-     * @param string $offset
-     * @return $this
+     *
+     * @param mixed $offset
+     * @return void
      */
-    public function offsetUnset($offset)
+    public function offsetUnset(mixed $offset): void
     {
         $this->destroy($offset);
-        return $this;
     }
 
     /**
      * return the current element in an array
      * handle data preparation
-     * 
+     *
      * @return mixed
      */
-    public function current()
+    public function current(): mixed
     {
-        current($this->_DATA);
-        return $this->toArray($this->key());
+        return current($this->data);
     }
 
     /**
      * return the current element in an array
-     * 
-     * @return mixed
+     *
+     * @return string|int|null
      */
-    public function key()
+    public function key(): string|int|null
     {
-        return key($this->_DATA);
+        return key($this->data);
     }
 
     /**
      * advance the internal array pointer of an array
      * handle data preparation
-     * 
-     * @return mixed
+     *
+     * @return void
      */
-    public function next()
+    public function next(): void
     {
-        next($this->_DATA);
-        return $this->toArray($this->key());
+        next($this->data);
     }
 
     /**
      * rewind the position of a file pointer
-     * 
-     * @return mixed
+     *
+     * @return void
      */
-    public function rewind()
+    public function rewind(): void
     {
-        return reset($this->_DATA);
+        reset($this->data);
     }
 
     /**
      * checks if current position is valid
-     * 
+     *
      * @return bool
      */
-    public function valid()
+    public function valid(): bool
     {
-        return key($this->_DATA) !== null;
+        return key($this->data) !== null;
     }
 
     /**
      * allow to stop data validation
-     * 
-     * @return $this
+     *
+     * @return Container|ContainerObject
      */
-    public function stopValidation()
+    public function stopValidation(): self
     {
-        $this->_validationOn = false;
+        $this->validationOn = false;
         return $this;
     }
 
     /**
      * allow to start data validation
-     * 
-     * @return $this
+     *
+     * @return Container|ContainerObject
      */
-    public function startValidation()
+    public function startValidation(): self
     {
-        $this->_validationOn = true;
+        $this->validationOn = true;
         return $this;
     }
 
     /**
      * allow to stop data preparation before add tro object
-     * 
-     * @return $this
+     *
+     * @return Container|ContainerObject
      */
-    public function stopOutputPreparation()
+    public function stopOutputPreparation(): self
     {
-        $this->_getPreparationOn = false;
+        $this->getPreparationOn = false;
         return $this;
     }
 
     /**
      * allow to start data preparation before add tro object
-     * 
-     * @return $this
+     *
+     * @return Container|ContainerObject
      */
-    public function startOutputPreparation()
+    public function startOutputPreparation(): self
     {
-        $this->_getPreparationOn = true;
+        $this->getPreparationOn = true;
         return $this;
     }
 
     /**
      * allow to stop data preparation before return them from object
-     * 
-     * @return $this
+     *
+     * @return Container|ContainerObject
      */
-    public function stopInputPreparation()
+    public function stopInputPreparation(): self
     {
-        $this->_setPreparationOn = false;
+        $this->setPreparationOn = false;
         return $this;
     }
 
     /**
      * allow to start data preparation before return them from object
-     * 
-     * @return $this
+     *
+     * @return Container|ContainerObject
      */
-    public function startInputPreparation()
+    public function startInputPreparation(): self
     {
-        $this->_setPreparationOn = true;
+        $this->setPreparationOn = true;
         return $this;
     }
 
     /**
      * create exception message and set it in object
-     * 
+     *
      * @param Exception $exception
-     * @return $this
+     * @return Container|ContainerObject
      */
-    protected function _addException(Exception $exception)
+    protected function addException(Exception $exception): self
     {
-        $this->_hasErrors = true;
-        $this->_errorsList[$exception->getCode()] = [
-            'message'   => $exception->getMessage(),
-            'line'      => $exception->getLine(),
-            'file'      => $exception->getFile(),
-            'trace'     => $exception->getTraceAsString(),
+        $this->hasErrors = true;
+        $this->errorsList[$exception->getCode()] = [
+            'message' => $exception->getMessage(),
+            'line' => $exception->getLine(),
+            'file' => $exception->getFile(),
+            'trace' => $exception->getTraceAsString(),
         ];
 
         return $this;
@@ -2244,17 +2260,18 @@ trait ContainerObject
      * as parameter take data given to object by reference
      *
      * @param mixed $data
+     * @return mixed
      */
-    public function initializeObject(&$data)
+    public function initializeObject(mixed $data): mixed
     {
-        
+        return $data;
     }
 
     /**
      * can be overwritten by children objects to start with some special
      * operations
      */
-    public function afterInitializeObject()
+    public function afterInitializeObject(): void
     {
         
     }
@@ -2262,10 +2279,10 @@ trait ContainerObject
     /**
      * can be overwritten by children objects to make some special process on
      * data before return
-     * 
+     *
      * @param string|null $key
      */
-    protected function _prepareData($key = null)
+    protected function prepareData(?string $key = null): void
     {
         
     }
@@ -2275,9 +2292,10 @@ trait ContainerObject
      * as parameter take data given to object by reference
      *
      * @param mixed $data
+     * @return mixed
      */
-    protected function _beforeInitializeObject($data)
+    protected function beforeInitializeObject(mixed $data): mixed
     {
-
+        return $data;
     }
 }

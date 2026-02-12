@@ -1,0 +1,12 @@
+services:
+  php82:
+    image: chajr/php82-dev
+    networks:
+      - backend82
+    command: ${RUN_COMMAND}
+    volumes:
+      - ${MOUNT_POINT}
+
+networks:
+  backend82:
+    driver: bridge

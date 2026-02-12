@@ -10,11 +10,10 @@
  */
 namespace BlueContainer;
 
-use Serializable;
 use ArrayAccess;
 use Iterator;
 
-class Container implements Serializable, ArrayAccess, Iterator
+class Container implements ArrayAccess, Iterator
 {
     use ContainerObject;
 }

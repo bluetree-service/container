@@ -1,0 +1,12 @@
+services:
+  php83:
+    image: chajr/php83-dev
+    networks:
+      - backend83
+    command: ${RUN_COMMAND}
+    volumes:
+      - ${MOUNT_POINT}
+
+networks:
+  backend83:
+    driver: bridge

@@ -2,14 +2,14 @@
 
 namespace Test;
 
-class SerializeFail implements \Serializable
+class SerializeFail
 {
-    public function serialize()
+    public function __serialize(): array
     {
-        throw new \Zend\Serializer\Exception\RuntimeException('test exception');
+        throw new \Laminas\Serializer\Exception\RuntimeException('test exception');
     }
 
-    public function unserialize($string)
+    public function __unserialize($string): void
     {
         
     }

@@ -10,20 +10,22 @@
 namespace Test;
 
 use BlueContainer\Container;
-use Zend\Serializer\Serializer;
-use StdClass;
+use Laminas\Serializer\Adapter\PhpSerialize;
+use PHPUnit\Framework\TestCase;
 
-class ObjectTest extends \PHPUnit_Framework_TestCase
+class ContainerTest extends TestCase
 {
     /**
      * prefix for some changed data
      */
-    const IM_CHANGED = 'im changed';
+    public const IM_CHANGED = 'im changed';
 
     /**
      * check data validation
+     *
+     * @throws \ReflectionException
      */
-    public function testDataValidation()
+    public function testDataValidation(): void
     {
         $object = new Container();
         $data   = [
@@ -54,15 +56,15 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         $object->set($data);
 
         $this->assertTrue($object->checkErrors());
-        $this->assertEquals($object->returnObjectError()[0], [
+        $this->assertEquals([
             "message" => "validation_mismatch",
             "key"=> "data_first",
             "data"=> "first data",
             "rule"=> "#^[\\d]+$#"
-        ]);
-        $this->assertEquals($object->returnObjectError()[1]['message'], 'validation_mismatch');
-        $this->assertEquals($object->returnObjectError()[1]['key'], 'data_third');
-        $this->assertEquals($object->returnObjectError()[1]['data'], 'third data');
+        ], $object->returnObjectError()[0]);
+        $this->assertEquals('validation_mismatch', $object->returnObjectError()[1]['message']);
+        $this->assertEquals('data_third', $object->returnObjectError()[1]['key']);
+        $this->assertEquals('third data', $object->returnObjectError()[1]['data']);
         $this->assertCount(2, $object->returnObjectError());
 
         $object->removeValidationRule();
@@ -72,8 +74,10 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * check data validation in constructor
+     *
+     * @throws \ReflectionException
      */
-    public function testDataValidationInConstructor()
+    public function testDataValidationInConstructor(): void
     {
         $object = new Container([
             'data'          => [
@@ -91,8 +95,10 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * check data preparation in constructor
+     *
+     * @throws \ReflectionException
      */
-    public function testDataPreparationInConstructor()
+    public function testDataPreparationInConstructor(): void
     {
         $object = new Container([
             'data'          => [
@@ -117,11 +123,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testCreateSimpleObject($first, $second)
+    public function testCreateSimpleObject(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertFalse($object->checkErrors());
         $this->assertEmpty($object->returnObjectError());
@@ -129,17 +136,18 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * check data returned by get* methods
-     * 
+     *
      * @param mixed $first
      * @param mixed $second
-     * 
+     *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testGetDataFromObject($first, $second)
+    public function testGetDataFromObject(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertEquals($first, $object->getDataFirst());
         $this->assertEquals($second, $object->toArray('data_second'));
@@ -147,7 +155,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         $this->assertNull($object->getDataNotExists());
 
         $this->assertEquals(
-            $this->_getSimpleData($first, $second),
+            $this->getSimpleData($first, $second),
             $object->toArray()
         );
     }
@@ -160,11 +168,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testCheckingData($first, $second)
+    public function testCheckingData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertTrue($object->hasDataFirst());
         $this->assertFalse($object->hasDataNotExists());
@@ -179,16 +188,10 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($object->notDataFirst($first));
 
         $this->assertTrue($object->isDataFirst(function ($key, $val) use ($first) {
-            if ($val === $first) {
-                return true;
-            }
-            return false;
+            return $val === $first;
         }));
         $this->assertTrue($object->notDataFirst(function ($key, $val) {
-            if ($val !== self::IM_CHANGED) {
-                return true;
-            }
-            return false;
+            return $val !== self::IM_CHANGED;
         }));
     }
 
@@ -200,11 +203,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testSetDataInObjectByMagicMethods($first, $second)
+    public function testSetDataInObjectByMagicMethods(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertFalse($object->hasDataThird());
         $this->assertFalse($object->dataChanged());
@@ -227,11 +231,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testSetDataInObjectByDataMethod($first, $second)
+    public function testSetDataInObjectByDataMethod(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertFalse($object->hasDataThird());
         $this->assertFalse($object->has('data_fourth'));
@@ -255,11 +260,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testRemovingData($first, $second)
+    public function testRemovingData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertFalse($object->dataChanged());
 
@@ -280,7 +286,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     /**
      * check that access to non existing method will create error information
      */
-    public function testAccessForNonExistingMethods()
+    public function testAccessForNonExistingMethods(): void
     {
         $object = new Container();
         $object->executeNonExistingMethod();
@@ -300,11 +306,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testDataRestorationForSingleData($first, $second)
+    public function testDataRestorationForSingleData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertFalse($object->dataChanged());
         $this->assertFalse($object->keyDataChanged('data_first'));
@@ -331,11 +338,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testFullDataRestoration($first, $second)
+    public function testFullDataRestoration(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertFalse($object->dataChanged());
         $object->setDataFirst('bar');
@@ -344,7 +352,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
         $object->restore();
         $this->assertEquals(
-            $this->_getSimpleData($first, $second),
+            $this->getSimpleData($first, $second),
             $object->toArray()
         );
         $this->assertFalse($object->dataChanged());
@@ -358,11 +366,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testDataReplacement($first, $second)
+    public function testDataReplacement(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertFalse($object->dataChanged());
         $object->setDataFirst('bar');
@@ -382,11 +391,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testAccessToDataAsArray($first, $second)
+    public function testAccessToDataAsArray(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         foreach ($object as $key => $val) {
             if ($key === 'data_first') {
@@ -397,11 +407,11 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
             }
         }
 
-        $this->assertEquals($object['data_first'], $first);
+        $this->assertEquals($first, $object['data_first']);
 
         $object[null] = 'some data';
 
-        $this->assertEquals($object->get('integer_key_0'), 'some data');
+        $this->assertEquals('some data', $object->get('integer_key_0'));
     }
 
     /**
@@ -412,28 +422,29 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testAccessToDataByAttributes($first, $second)
+    public function testAccessToDataByAttributes(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
-        $this->assertEquals($object->data_first, $first);
+        $this->assertEquals($first, $object->data_first);
         $this->assertNull($object->data_non_exists);
 
         $object->data_third = 'data third';
-        $this->assertEquals($object->data_third, 'data third');
+        $this->assertEquals('data third', $object->data_third);
     }
 
     /**
      * check echoing of object
      * with separator changing
      *
-     * @requires _simpleObject
+     * @requires simpleObject
      */
-    public function testDisplayObjectAsStringWithSeparator()
+    public function testDisplayObjectAsStringWithSeparator(): void
     {
-        $object = $this->_simpleObject('first data', 'second data');
+        $object = $this->simpleObject('first data', 'second data');
         $this->assertEquals('first data, second data', (string)$object);
 
         $object->changeSeparator('; ');
@@ -454,7 +465,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
      */
-    public function testDataPreparationOnEnter($first, $second)
+    public function testDataPreparationOnEnter(mixed $first, mixed $second): void
     {
         $object = new Container();
         $object->putPreparationCallback('#data_[\w]+#', function ($key, $value) {
@@ -466,7 +477,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
             return $value;
         });
 
-        $this->assertTrue($object->returnPreparationCallback()['#data_[\w]+#'] instanceof \Closure);
+        $this->assertInstanceOf(\Closure::class, $object->returnPreparationCallback()['#data_[\w]+#']);
 
         $object->stopInputPreparation();
 
@@ -495,7 +506,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
      */
-    public function testDataPreparationOnReturn($first, $second)
+    public function testDataPreparationOnReturn(mixed $first, mixed $second): void
     {
         $object = new Container();
         $object->putReturnCallback('#data_[\w]+#', function ($key, $value) {
@@ -507,7 +518,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
             return $value;
         });
 
-        $this->assertTrue($object->returnReturnCallback()['#data_[\w]+#'] instanceof \Closure);
+        $this->assertInstanceOf(\Closure::class, $object->returnReturnCallback()['#data_[\w]+#']);
 
         $object->stopOutputPreparation();
 
@@ -535,11 +546,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleJsonData
+     * @requires exampleJsonData
+     * @throws \ReflectionException|\JsonException
      */
-    public function testCreationWithJsonData($first, $second)
+    public function testCreationWithJsonData(mixed $first, mixed $second): void
     {
-        $jsonData = $this->_exampleJsonData($first, $second);
+        $jsonData = $this->exampleJsonData($first, $second);
 
         $object = new Container([
             'data'  => $jsonData,
@@ -558,11 +570,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleStdData
+     * @requires exampleStdData
+     * @throws \ReflectionException
      */
-    public function testCreationWithStdClassData($first, $second)
+    public function testCreationWithStdClassData(mixed $first, mixed $second): void
     {
-        $std = $this->_exampleStdData($first, $second);
+        $std = $this->exampleStdData($first, $second);
 
         $object = new Container(['data' => $std]);
 
@@ -578,11 +591,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleStdData
+     * @requires exampleStdData
+     * @throws \ReflectionException
      */
-    public function testCreationWithSerializedArray($first, $second)
+    public function testCreationWithSerializedArray(mixed $first, mixed $second): void
     {
-        $serialized = $this->_exampleSerializedData($first, $second);
+        $serialized = $this->exampleSerializedData($first, $second);
 
         $object = new Container([
             'type'  => 'serialized',
@@ -601,19 +615,20 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleStdData
+     * @requires exampleStdData
+     * @throws \ReflectionException
      */
-    public function testCreationWithSerializedObject($first, $second)
+    public function testCreationWithSerializedObject(mixed $first, mixed $second): void
     {
-        $serialized = $this->_exampleSerializedData($first, $second, true);
+        $serialized = $this->exampleSerializedData($first, $second, true);
         $object = new Container([
             'type'  => 'serialized',
             'data'  => $serialized,
         ]);
 
         $std = $object->getStdClass();
-        $this->assertObjectHasAttribute('data_first', $std);
-        $this->assertObjectHasAttribute('data_second', $std);
+        $this->assertObjectHasProperty('data_first', $std);
+        $this->assertObjectHasProperty('data_second', $std);
         $this->assertEquals($first, $object->toArray('std_class')->data_first);
         $this->assertEquals($second, $std->data_second);
     }
@@ -626,27 +641,29 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleStdData
+     * @requires exampleStdData
+     * @throws \ReflectionException
+     * @throws \DOMException
      */
-    public function testCreationWithSimpleXml($first, $second)
+    public function testCreationWithSimpleXml(mixed $first, mixed $second): void
     {
-        $xml = $this->_exampleSimpleXmlData($first, $second);
+        $xml = $this->exampleSimpleXmlData($first, $second);
         $object = new Container([
             'type'  => 'simple_xml',
             'data'  => $xml,
         ]);
 
         $this->assertXmlStringEqualsXmlString(
-            $this->_exampleSimpleXmlData($first, $second),
+            $this->exampleSimpleXmlData($first, $second),
             $object->toXml()
         );
         $this->assertXmlStringEqualsXmlString(
-            $this->_exampleSimpleXmlData($first, $second),
+            $this->exampleSimpleXmlData($first, $second),
             $object->toXml(false)
         );
 
-        $this->assertEquals($this->_convertType($first), $object->getDataFirst());
-        $this->assertEquals($this->_convertType($second), $object->toArray('data_second'));
+        $this->assertEquals($this->convertType($first), $object->getDataFirst());
+        $this->assertEquals($this->convertType($second), $object->toArray('data_second'));
     }
 
     /**
@@ -657,28 +674,30 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleStdData
+     * @requires exampleStdData
+     * @throws \ReflectionException
+     * @throws \DOMException
      */
-    public function testCreationWithXml($first, $second)
+    public function testCreationWithXml(mixed $first, mixed $second): void
     {
-        $xml = $this->_exampleXmlData($first, $second);
+        $xml = $this->exampleXmlData($first, $second);
         $object = new Container([
             'type'  => 'xml',
             'data'  => $xml,
         ]);
 
         $this->assertXmlStringEqualsXmlString(
-            $this->_exampleXmlData($first, $second),
+            $this->exampleXmlData($first, $second),
             $object->toXml()
         );
         $this->assertXmlStringEqualsXmlString(
-            $this->_exampleXmlData($first, $second),
+            $this->exampleXmlData($first, $second),
             $object->toXml(false)
         );
 
-        $this->assertEquals($this->_convertType($first), $object->getDataFirst()[0]);
+        $this->assertEquals($this->convertType($first), $object->getDataFirst()[0]);
         $this->assertEquals(
-            $this->_convertType($second),
+            $this->convertType($second),
             $object->getDataFirst()['@attributes']['data_second']
         );
     }
@@ -691,13 +710,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleJsonData
-     * @requires _dataPreparationCommon
+     * @requires exampleJsonData
+     * @requires dataPreparationCommon
+     * @throws \ReflectionException|\JsonException
      */
-    public function testCreationWithJsonDataDataPreparation($first, $second)
+    public function testCreationWithJsonDataDataPreparation(mixed $first, mixed $second): void
     {
-        $data = $this->_exampleJsonData($first, $second);
-        $this->_dataPreparationCommon($first, $data, 'json');
+        $data = $this->exampleJsonData($first, $second);
+        $this->dataPreparationCommon($first, $data, 'json');
     }
 
     /**
@@ -708,13 +728,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleJsonData
-     * @requires _dataPreparationCommon
+     * @requires exampleJsonData
+     * @requires dataPreparationCommon
+     * @throws \ReflectionException
      */
-    public function testCreationWithStdClassDataDataPreparation($first, $second)
+    public function testCreationWithStdClassDataDataPreparation(mixed $first, mixed $second): void
     {
-        $data = $this->_exampleStdData($first, $second);
-        $this->_dataPreparationCommon($first, $data, 'std');
+        $data = $this->exampleStdData($first, $second);
+        $this->dataPreparationCommon($first, $data, 'std');
     }
 
     /**
@@ -725,13 +746,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleJsonData
-     * @requires _dataPreparationCommon
+     * @requires exampleJsonData
+     * @requires dataPreparationCommon
+     * @throws \ReflectionException
      */
-    public function testCreationWithSerializedArrayDataPreparation($first, $second)
+    public function testCreationWithSerializedArrayDataPreparation(mixed $first, mixed $second): void
     {
-        $data = $this->_exampleSerializedData($first, $second);
-        $this->_dataPreparationCommon($first, $data, 'serialized_array');
+        $data = $this->exampleSerializedData($first, $second);
+        $this->dataPreparationCommon($first, $data, 'serialized_array');
     }
 
     /**
@@ -742,14 +764,15 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleJsonData
-     * @requires _dataPreparationCommon
+     * @requires exampleJsonData
+     * @requires dataPreparationCommon
+     * @throws \ReflectionException
      */
-    public function testCreationWithSerializedObjectDataPreparation($first, $second)
+    public function testCreationWithSerializedObjectDataPreparation(mixed $first, mixed $second): void
     {
-        $data = $this->_exampleSerializedData($first, $second, true);
+        $data = $this->exampleSerializedData($first, $second, true);
 
-        $object             = new Container;
+        $object             = new Container();
         $dataPreparation    = [
             '#^std_class#' => function ($key, $val) {
                 $val->data_first = self::IM_CHANGED;
@@ -760,7 +783,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         $object->unserialize($data);
 
         $this->assertEquals(self::IM_CHANGED, $object->getStdClass()->data_first);
-        $this->assertNotEquals($first, $object->getStdClass()->data_first);
+        $this->assertNotSame($first, $object->getStdClass()->data_first);
     }
 
     /**
@@ -771,13 +794,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleJsonData
-     * @requires _dataPreparationCommon
+     * @requires exampleJsonData
+     * @requires dataPreparationCommon
+     * @throws \ReflectionException
      */
-    public function testCreationWithSimpleXmlDataPreparation($first, $second)
+    public function testCreationWithSimpleXmlDataPreparation(mixed $first, mixed $second): void
     {
-        $data = $this->_exampleSimpleXmlData($first, $second);
-        $this->_dataPreparationCommon($first, $data, 'simple_xml');
+        $data = $this->exampleSimpleXmlData($first, $second);
+        $this->dataPreparationCommon($first, $data, 'simple_xml');
     }
 
     /**
@@ -788,13 +812,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _exampleJsonData
-     * @requires _dataPreparationCommon
+     * @requires exampleJsonData
+     * @requires dataPreparationCommon
+     * @throws \ReflectionException
      */
-    public function testCreationWithXmlDataPreparation($first, $second)
+    public function testCreationWithXmlDataPreparation(mixed $first, mixed $second): void
     {
-        $data = $this->_exampleXmlData($first, $second);
-        $this->_dataPreparationCommon($first, $data, 'xml');
+        $data = $this->exampleXmlData($first, $second);
+        $this->dataPreparationCommon($first, $data, 'xml');
     }
 
     /**
@@ -805,13 +830,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
-     * @requires _exampleJsonData
+     * @requires simpleObject
+     * @requires exampleJsonData
+     * @throws \JsonException|\ReflectionException
      */
-    public function testExportObjectAsJson($first, $second)
+    public function testExportObjectAsJson(mixed $first, mixed $second): void
     {
-        $data   = $this->_exampleJsonData($first, $second);
-        $object = $this->_simpleObject($first, $second);
+        $data   = $this->exampleJsonData($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertEquals($data, $object->toJson());
 
@@ -820,7 +846,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
                 return self::IM_CHANGED;
             }
         ]);
-        $data = $this->_exampleJsonData(self::IM_CHANGED, $second);
+        $data = $this->exampleJsonData(self::IM_CHANGED, $second);
 
         $this->assertEquals($data, $object->toJson());
     }
@@ -833,13 +859,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
-     * @requires _exampleStdData
+     * @requires simpleObject
+     * @requires exampleStdData
+     * @throws \ReflectionException
      */
-    public function testExportObjectAsStdClass($first, $second)
+    public function testExportObjectAsStdClass(mixed $first, mixed $second): void
     {
-        $data   = $this->_exampleStdData($first, $second);
-        $object = $this->_simpleObject($first, $second);
+        $data   = $this->exampleStdData($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertEquals($data, $object->toStdClass());
 
@@ -848,7 +875,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
                 return self::IM_CHANGED;
             }
         ]);
-        $data = $this->_exampleStdData(self::IM_CHANGED, $second);
+        $data = $this->exampleStdData(self::IM_CHANGED, $second);
 
         $this->assertEquals($data, $object->toStdClass());
     }
@@ -861,17 +888,18 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
-     * @requires _exampleStdData
+     * @requires simpleObject
+     * @requires exampleStdData
+     * @throws \ReflectionException
      */
-    public function testExportObjectAsString($first, $second)
+    public function testExportObjectAsString(mixed $first, mixed $second): void
     {
         if (is_array($second)) {
             $second = implode(', ', $second);
         }
         $string = "$first, $second";
 
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
         $this->assertEquals($string, $object->toString());
 
         $object->putReturnCallback([
@@ -886,19 +914,20 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * export object as serialized string with data return callback
-     * 
+     *
      * @param mixed $first
      * @param mixed $second
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
-     * @requires _exampleSerializedData
+     * @requires simpleObject
+     * @requires exampleSerializedData
+     * @throws \ReflectionException
      */
-    public function testExportObjectAsSerializedString($first, $second)
+    public function testExportObjectAsSerializedString(mixed $first, mixed $second): void
     {
-        $data = $this->_exampleSerializedData($first, $second);
-        $object = $this->_simpleObject($first, $second);
+        $data = $this->exampleSerializedData($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertEquals($data, $object->serialize());
 
@@ -907,22 +936,23 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
                 return self::IM_CHANGED;
             }
         ]);
-        $data = $this->_exampleSerializedData(self::IM_CHANGED, $second);
+        $data = $this->exampleSerializedData(self::IM_CHANGED, $second);
 
         $this->assertEquals($data, $object->serialize());
     }
 
     /**
      * export object as serialized string (with object) with data return callback
-     * 
+     *
      * @param mixed $first
      * @param mixed $second
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _getSimpleData
+     * @requires getSimpleData
+     * @throws \ReflectionException
      */
-    public function testExportObjectAsSerializedStringWithObject($first, $second)
+    public function testExportObjectAsSerializedStringWithObject(mixed $first, mixed $second): void
     {
         $object = new Container();
         $object->putPreparationCallback([
@@ -930,27 +960,30 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
                 return (object)$data;
             }
         ]);
-        $object->appendArray($this->_getSimpleData($first, $second));
-        $data = $this->_exampleSerializedData($first, 'data_second: {;skipped_object;}');
+        $object->appendArray($this->getSimpleData($first, $second));
+        $data = $this->exampleSerializedData($first, 'data_second: {;skipped_object;}');
+        $this->assertEquals(1,1);
 
         $this->assertEquals($data, $object->serialize(true));
     }
 
     /**
      * export object as xml with data return callback
-     * 
+     *
      * @param mixed $first
      * @param mixed $second
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
-     * @requires _exampleSimpleXmlData
+     * @requires simpleObject
+     * @requires exampleSimpleXmlData
+     * @throws \DOMException
+     * @throws \ReflectionException
      */
-    public function testExportObjectAsXml($first, $second)
+    public function testExportObjectAsXml(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
-        $data   = $this->_exampleSimpleXmlData($first, $second);
+        $object = $this->simpleObject($first, $second);
+        $data   = $this->exampleSimpleXmlData($first, $second);
 
         $object->putReturnCallback([
             '#^data_second$#' => function ($key, $val) {
@@ -961,16 +994,13 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
                 return $val;
             },
             '#.*#' => function ($key, $val) {
-                switch (true) {
-                    case is_null($val):
-                        return 'null';
-                    case $val === true:
-                        return 'true';
-                    case $val === false:
-                        return 'false';
-                }
+                return match (true) {
+                    is_null($val) => 'null',
+                    $val === true => 'true',
+                    $val === false => 'false',
+                    default => $val,
+                };
 
-                return $val;
             }
         ]);
         $xml = $object->toXml(false);
@@ -986,13 +1016,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testDataComparison($first, $second)
+    public function testDataComparison(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
-        $bool = $object->compareData('5', 'data_first', '===');
+        $bool = $object->compareData('5', 'data_first');
         $this->assertFalse($bool);
 
         $object->setDataFirst(5);
@@ -1003,10 +1034,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($bool);
 
         $bool = $object->compareData(5, 'data_first', function ($key, $dataToCheck, $data) {
-            if (is_int($dataToCheck) && $data[$key] === $dataToCheck) {
-                return true;
-            }
-            return false;
+            return is_int($dataToCheck) && $data[$key] === $dataToCheck;
         });
         $this->assertTrue($bool);
 
@@ -1016,14 +1044,16 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * test other compare operators
+     *
+     * @throws \ReflectionException
      */
-    public function testCompareOperators()
+    public function testCompareOperators(): void
     {
         $object = new Container([
             'data' => [
                 'first'     => 5,
                 'second'    => true,
-                'object'    => new Container,
+                'object'    => new Container(),
             ]
         ]);
 
@@ -1057,13 +1087,14 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testObjectComparison($first, $second)
+    public function testObjectComparison(mixed $first, mixed $second): void
     {
-        $object         = $this->_simpleObject($first, $second);
-        $newObject      = $this->_simpleObject($second, $first);
-        $anotherObject  = $this->_simpleObject($second, $first);
+        $object         = $this->simpleObject($first, $second);
+        $newObject      = $this->simpleObject($second, $first);
+        $anotherObject  = $this->simpleObject($second, $first);
 
         $bool = $object->compareData($newObject);
         $this->assertFalse($bool);
@@ -1080,9 +1111,10 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testDataTraveling($first, $second)
+    public function testDataTraveling(mixed $first, mixed $second): void
     {
         if (is_array($second)) {
             $second[1] = [
@@ -1091,7 +1123,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
             ];
         }
 
-        $object     = $this->_simpleObject($first, $second);
+        $object     = $this->simpleObject($first, $second);
         $function   = function ($key, $val) {
             if ($key === 0 && $val === 'bar') {
                 return $val;
@@ -1118,12 +1150,13 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testObjectMerging($first, $second)
+    public function testObjectMerging(mixed $first, mixed $second): void
     {
-        $object         = $this->_simpleObject($first, $second);
-        $newObject      = $this->_simpleObject($second, $first);
+        $object         = $this->simpleObject($first, $second);
+        $newObject      = $this->simpleObject($second, $first);
 
         $object->mergeBlueObject($newObject);
 
@@ -1143,11 +1176,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testCreationWithCsvData($first, $second)
+    public function testCreationWithCsvData(mixed $first, mixed $second): void
     {
-        $csv = $this->_exampleCsvData($first, $second);
+        $csv = $this->exampleCsvData($first, $second);
         $csv = str_replace(',', ';', $csv);
 
         $object = new Container([
@@ -1156,12 +1190,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         ]);
 
         $this->assertEquals('integer_key_', $object->returnIntegerKeyPrefix());
-        $this->assertEquals($this->_convertType($first), $object->getIntegerKey0()[0]);
+        $this->assertEquals($this->convertType($first), $object->getIntegerKey0()[0]);
 
-        if (count($second) > 1) {
+        if (\is_array($second) && \count($second) > 1) {
             $this->assertEquals($second, $object->getIntegerKey1());
         } else {
-            $this->assertEquals($this->_convertType($second), $object->getIntegerKey1()[0]);
+            $this->assertEquals($this->convertType($second), $object->getIntegerKey1()[0]);
         }
     }
 
@@ -1173,22 +1207,23 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testChangeCsvDelimiter($first, $second)
+    public function testChangeCsvDelimiter(mixed $first, mixed $second): void
     {
         $object = new Container();
-        $csv    = $this->_exampleCsvData($first, $second);
+        $csv    = $this->exampleCsvData($first, $second);
 
         $object->changeCsvDelimiter(',');
         $object->appendCsv($csv);
 
-        $this->assertEquals($this->_convertType($first), $object->getIntegerKey0()[0]);
+        $this->assertEquals($this->convertType($first), $object->getIntegerKey0()[0]);
 
-        if (count($second) > 1) {
+        if (\is_array($second) && \count($second) > 1) {
             $this->assertEquals($second, $object->getIntegerKey1());
         } else {
-            $this->assertEquals($this->_convertType($second), $object->getIntegerKey1()[0]);
+            $this->assertEquals($this->convertType($second), $object->getIntegerKey1()[0]);
         }
     }
 
@@ -1200,14 +1235,15 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testExportObjectAsCsvData($first, $second)
+    public function testExportObjectAsCsvData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($this->_convertType($first), $this->_convertType($second));
+        $object = $this->simpleObject($this->convertType($first), $this->convertType($second));
         $object->changeCsvDelimiter(',');
 
-        $this->assertEquals($this->_exampleCsvData($first, $second), $object->toCsv());
+        $this->assertEquals($this->exampleCsvData($first, $second), $object->toCsv());
     }
 
     /**
@@ -1218,31 +1254,33 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
-     * @requires _exampleIniData
+     * @requires simpleObject
+     * @requires exampleIniData
+     * @throws \ReflectionException
      */
-    public function testCreationWithIniData($first, $second)
+    public function testCreationWithIniData(mixed $first, mixed $second): void
     {
         $object = new Container([
             'type'  => 'ini',
-            'data'  => $this->_exampleIniData($first, $second),
+            'data'  => $this->exampleIniData($first, $second),
         ]);
 
         $this->assertFalse($object->returnProcessIniSection());
-        $this->assertEquals($this->_convertType($first), $object->getDataFirst());
-        $this->assertEquals($this->_convertType($second), $object->getDataSecond());
+        $this->assertEquals($this->convertType($first), $object->getDataFirst());
+        $this->assertEquals($this->convertType($second), $object->getDataSecond());
 
         $object = new Container(['ini_section' => true]);
-        $ini    = $this->_exampleIniData($first, $second, true);
+        $ini    = $this->exampleIniData($first, $second, true);
 
         $this->assertTrue($object->returnProcessIniSection());
         $object->appendIni($ini);
-        $this->assertEquals($this->_convertType($first), $object->getDataFirst());
-        if (count($second) > 1) {
+        $this->assertEquals($this->convertType($first), $object->getDataFirst());
+
+        if (\is_array($second) && \count($second) > 1) {
             $this->assertEquals($second, $object->getDataSecond());
         } else {
             $this->assertEquals(
-                $this->_convertType($second),
+                $this->convertType($second),
                 $object->getDataSecond()
             );
         }
@@ -1259,25 +1297,26 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
-     * @requires _exampleIniData
+     * @requires simpleObject
+     * @requires exampleIniData
+     * @throws \ReflectionException
      */
-    public function testExportObjectAsIniData($first, $second)
+    public function testExportObjectAsIniData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($this->_convertType($first), $this->_convertType($second));
+        $object = $this->simpleObject($this->convertType($first), $this->convertType($second));
         $ini    = $object->toIni();
 
-        $this->assertEquals($this->_exampleIniData($first, $second), rtrim($ini));
+        $this->assertEquals($this->exampleIniData($first, $second), rtrim($ini));
 
         if (!is_array($second)) {
-            $second = $this->_convertType($second);
+            $second = $this->convertType($second);
         }
-        $object = $this->_simpleObject($this->_convertType($first), $second);
+        $object = $this->simpleObject($this->convertType($first), $second);
         $object->processIniSection(true);
         $ini    = $object->toIni();
 
         $this->assertEquals(
-            rtrim($this->_exampleIniData($first, $second, true)),
+            rtrim($this->exampleIniData($first, $second, true)),
             rtrim($ini)
         );
     }
@@ -1290,11 +1329,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testIsSetData($first, $second)
+    public function testIsSetData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertTrue($object->__isset('data_first'));
         $this->assertFalse($object->__isset('data_not_exist'));
@@ -1308,11 +1348,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testUnsetData($first, $second)
+    public function testUnsetData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertTrue($object->__isset('data_first'));
         $object->__unset('data_first');
@@ -1321,15 +1362,19 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * test object serialization with exception
+     *
+     * @throws \ReflectionException
      */
-    public function testSerializeWithException()
+    public function testSerializeWithException(): void
     {
-        $instance = new Container;
-        $instance->set('object', new SerializeFail);
+        $instance = new Container();
+        $instance->set('object', new SerializeFail());
         $instance->serialize();
 
         $this->assertTrue($instance->checkErrors());
-        $this->assertEquals($instance->returnObjectError()[0]['message'], 'test exception');
+        $this->assertEquals('test exception', $instance->returnObjectError()[0]['message']);
+
+        restore_error_handler();
     }
 
     /**
@@ -1340,14 +1385,15 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testGetData($first, $second)
+    public function testGetData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertEquals(
-            $this->_getSimpleData($first, $second),
+            $this->getSimpleData($first, $second),
             $object->getData()
         );
     }
@@ -1360,11 +1406,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testHasData($first, $second)
+    public function testHasData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
 
         $this->assertTrue($object->hasData('data_first'));
         $object->unsetData('data_first');
@@ -1375,9 +1422,9 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
     /**
      * check that get will return null for none existing key
      */
-    public function testGetDataForNoneExistingKey()
+    public function testGetDataForNoneExistingKey(): void
     {
-        $object = new Container;
+        $object = new Container();
         $object->stopOutputPreparation();
         $this->assertNull($object->get('some_key'));
     }
@@ -1390,11 +1437,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testRestoreData($first, $second)
+    public function testRestoreData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
         $object->set('new_data', 'a');
 
         $this->assertEquals($second, $object->get('data_second'));
@@ -1416,11 +1464,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testClearData($first, $second)
+    public function testClearData(mixed $first, mixed $second): void
     {
-        $object = $this->_simpleObject($first, $second);
+        $object = $this->simpleObject($first, $second);
         $object->clearData('data_first');
 
         $this->assertNull($object->get('data_first'));
@@ -1435,11 +1484,12 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @dataProvider baseDataProvider
      * @requires baseDataProvider
-     * @requires _simpleObject
+     * @requires simpleObject
+     * @throws \ReflectionException
      */
-    public function testSetData($first, $second)
+    public function testSetData(mixed $first, mixed $second): void
     {
-        $object = new Container;
+        $object = new Container();
 
         $this->assertNull($object->get('data_first'));
 
@@ -1452,8 +1502,10 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * test try to execute none callable function
+     *
+     * @throws \ReflectionException
      */
-    public function testReturnValueForUnCallableFunction()
+    public function testReturnValueForUnCallableFunction(): void
     {
         $object = new Container([
             'preparation' => [
@@ -1468,27 +1520,30 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * test json that cannot be decoded
+     *
+     * @throws \ReflectionException
      */
-    public function testAppendJsonWithError()
+    public function testAppendJsonWithError(): void
     {
         $object = new Container([
             'type' => 'json',
             'data' => 'json',
         ]);
 
-        $this->assertEquals(true, $object->checkErrors());
+        $this->assertTrue($object->checkErrors());
     }
 
     /**
      * launch common object creation and assertion
-     * 
+     *
      * @param mixed $first
      * @param mixed $data
      * @param string $type
+     * @throws \ReflectionException
      */
-    protected function _dataPreparationCommon($first, $data, $type)
+    protected function dataPreparationCommon(mixed $first, mixed $data, string $type): void
     {
-        $object             = new Container;
+        $object             = new Container();
         $dataPreparation    = [
             '#^data_first$#' => function () {
                 return self::IM_CHANGED;
@@ -1515,15 +1570,17 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
         }
 
         $this->assertEquals(self::IM_CHANGED, $object->getDataFirst());
-        $this->assertNotEquals($first, $object->getDataFirst());
+        $this->assertNotSame($object->getDataFirst(), $first);
     }
 
     /**
      * test unserialize with string (none array or object)
+     *
+     * @throws \ReflectionException
      */
-    public function testAppendSerializeForStringData()
+    public function testAppendSerializeForStringData(): void
     {
-        $object     = new Container;
+        $object     = new Container();
         $string     = "Some string to \n serialize";
         $serialized = serialize($string);
 
@@ -1537,7 +1594,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * 
      * @return array
      */
-    public function baseDataProvider()
+    public static function baseDataProvider(): array
     {
         return [
             [1, 2],
@@ -1549,14 +1606,15 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
 
     /**
      * create simple object to test
-     * 
+     *
      * @param mixed $first
      * @param mixed $second
-     * @return \BlueContainer\Container
+     * @return Container
+     * @throws \ReflectionException
      */
-    protected function _simpleObject($first, $second)
+    protected function simpleObject(mixed $first, mixed $second): Container
     {
-        return new Container(['data' => $this->_getSimpleData($first, $second)]);
+        return new Container(['data' => $this->getSimpleData($first, $second)]);
     }
 
     /**
@@ -1566,7 +1624,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @param mixed $second
      * @return array
      */
-    protected function _getSimpleData($first, $second)
+    protected function getSimpleData(mixed $first, mixed $second): array
     {
         return [
             'data_first'    => $first,
@@ -1581,13 +1639,11 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @param mixed $second
      * @return string
      */
-    protected function _exampleCsvData($first, $second)
+    protected function exampleCsvData(mixed $first, mixed $second): string
     {
-        $first  = $this->_convertType($first);
-        $second = $this->_convertType($second);
-        $csv    = $first . "\n" . $second;
-
-        return $csv;
+        $first  = $this->convertType($first);
+        $second = $this->convertType($second);
+        return $first . "\n" . $second;
     }
 
     /**
@@ -1598,10 +1654,10 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @param bool $section
      * @return string
      */
-    protected function _exampleIniData($first, $second, $section = false)
+    protected function exampleIniData(mixed $first, mixed $second, bool $section = false): string
     {
         $ini    = '';
-        $first  = $this->_convertType($first);
+        $first  = $this->convertType($first);
         $ini    .= 'data_first = ' . $first . "\n";
 
         if ($section && is_array($second)) {
@@ -1610,7 +1666,7 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
                 $ini .= $key . ' = ' . $data . "\n";
             }
         } else {
-            $second = $this->_convertType($second);
+            $second = $this->convertType($second);
             $ini .= 'data_second = ' . $second;
         }
 
@@ -1624,18 +1680,16 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @param mixed $second
      * @return string
      */
-    protected function _exampleSimpleXmlData($first, $second)
+    protected function exampleSimpleXmlData(mixed $first, mixed $second): string
     {
-        $first  = $this->_convertType($first);
-        $second = $this->_convertType($second);
+        $first  = $this->convertType($first);
+        $second = $this->convertType($second);
 
-        $xml = "<?xml version='1.0' encoding='UTF-8'?>
+        return "<?xml version='1.0' encoding='UTF-8'?>
             <root>
                 <data_first>$first</data_first>
                 <data_second>$second</data_second>
             </root>";
-
-        return $xml;
     }
 
     /**
@@ -1645,17 +1699,15 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @param mixed $second
      * @return string
      */
-    protected function _exampleXmlData($first, $second)
+    protected function exampleXmlData(mixed $first, mixed $second): string
     {
-        $first  = $this->_convertType($first);
-        $second = $this->_convertType($second);
+        $first  = $this->convertType($first);
+        $second = $this->convertType($second);
 
-        $xml = "<?xml version='1.0' encoding='UTF-8'?>
+        return "<?xml version='1.0' encoding='UTF-8'?>
             <root>
                 <data_first data_second='$second'>$first</data_first>
             </root>";
-
-        return $xml;
     }
 
     /**
@@ -1664,39 +1716,27 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @param mixed $variable
      * @return string
      */
-    protected function _convertType($variable)
+    protected function convertType(mixed $variable): string
     {
-        switch (true) {
-            case is_null($variable):
-                $converted = 'null';
-                break;
-
-            case is_array($variable):
-                $converted = implode(',', $variable);
-                break;
-
-            case is_bool($variable):
-                $converted = var_export($variable, true);
-                break;
-
-            default:
-                $converted = $variable;
-                break;
-        }
-
-        return $converted;
+        return match (true) {
+            is_null($variable) => 'null',
+            is_array($variable) => implode(',', $variable),
+            is_bool($variable) => var_export($variable, true),
+            default => $variable,
+        };
     }
 
     /**
      * create json data to test
-     * 
+     *
      * @param mixed $first
      * @param mixed $second
      * @return string
+     * @throws \JsonException
      */
-    protected function _exampleJsonData($first, $second)
+    protected function exampleJsonData(mixed $first, mixed $second): string
     {
-        return json_encode($this->_getSimpleData($first, $second));
+        return json_encode($this->getSimpleData($first, $second), JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -1704,16 +1744,18 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      *
      * @param mixed $first
      * @param mixed $second
-     * @param bool @object
+     * @param bool $object @object
      * @return string
      */
-    protected function _exampleSerializedData($first, $second, $object = false)
+    protected function exampleSerializedData(mixed $first, mixed $second, bool $object = false): string
     {
+        $serializer = new PhpSerialize();
+
         if ($object) {
-            return Serializer::serialize((object)$this->_getSimpleData($first, $second));
+            return $serializer->serialize((object)$this->getSimpleData($first, $second));
         }
 
-        return Serializer::serialize($this->_getSimpleData($first, $second));
+        return $serializer->serialize($this->getSimpleData($first, $second));
     }
 
     /**
@@ -1723,9 +1765,9 @@ class ObjectTest extends \PHPUnit_Framework_TestCase
      * @param mixed $second
      * @return \stdClass
      */
-    protected function _exampleStdData($first, $second)
+    protected function exampleStdData(mixed $first, mixed $second): \stdClass
     {
-        $std                = new \stdClass;
+        $std                = new \stdClass();
         $std->data_first    = $first;
         $std->data_second   = $second;
 
