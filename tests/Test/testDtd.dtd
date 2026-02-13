@@ -1,0 +1,3 @@
+<!ELEMENT root (data_first)>
+<!ELEMENT data_first (#PCDATA)>
+<!ATTLIST data_first data_second CDATA #REQUIRED>

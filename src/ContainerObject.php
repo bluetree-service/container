@@ -679,7 +679,6 @@ trait ContainerObject
             '>' => $dataOrigin > $dataCheck,
             '<=' => $dataOrigin <= $dataCheck,
             '>=' => $dataOrigin >= $dataCheck,
-            '<=>' => $dataOrigin <=> $dataCheck,
             default => null,
         };
     }
@@ -860,19 +859,22 @@ trait ContainerObject
      * @return string
      * @throws DOMException
      */
-    public function toXml(bool $addCdata = true, string|bool$dtd = false, string $version = '1.0'): string
+    public function toXml(bool $addCdata = true, string|bool $dtd = false, string $version = '1.0'): string
     {
         $this->prepareData();
 
         $xml = new Xml(['version' => $version]);
+
+        if ($dtd) {
+            $implementation = $xml->implementation;
+            $dtdNode = $implementation->createDocumentType('root', '', $dtd);
+            $xml->appendChild($dtdNode);
+        }
+
         $root = $xml->createElement('root');
         $xml = $this->arrayToXml($this->toArray(), $xml, $addCdata, $root);
 
         $xml->appendChild($root);
-
-        if ($dtd) {
-            $dtd = "<!DOCTYPE root SYSTEM '$dtd'>";
-        }
 
         $xml->formatOutput = true;
         $xmlData = $xml->saveXmlFile(false);
@@ -883,7 +885,7 @@ trait ContainerObject
             return false;
         }
 
-        return $dtd . $xmlData;
+        return $xmlData;
     }
 
     /**
@@ -1400,7 +1402,7 @@ trait ContainerObject
     public function appendCsv(string $data): self
     {
         $counter = 0;
-        $rows = \str_getcsv($data, $this->csvLineDelimiter);
+        $rows = \str_getcsv($data, $this->csvLineDelimiter, $this->csvEnclosure, $this->csvEscape);
 
         foreach ($rows as $row) {
             $rowData = \str_getcsv(
@@ -2008,7 +2010,7 @@ trait ContainerObject
      * @param callable|null $ruleValue
      * @return Container|ContainerObject
      */
-    public function putPreparationCallback(string|array $ruleKey, callable $ruleValue = null): self
+    public function putPreparationCallback(string|array $ruleKey, ?callable $ruleValue = null): self
     {
         return $this->genericPut($ruleKey, $ruleValue, 'preparation_callback');
     }
@@ -2042,7 +2044,7 @@ trait ContainerObject
      * @param callable|null $ruleValue
      * @return Container|ContainerObject
      */
-    public function putReturnCallback(string|array $ruleKey, callable $ruleValue = null): self
+    public function putReturnCallback(string|array $ruleKey, ?callable $ruleValue = null): self
     {
         return $this->genericPut($ruleKey, $ruleValue, 'return_callback');
     }

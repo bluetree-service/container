@@ -12,6 +12,7 @@ namespace Test;
 use BlueContainer\Container;
 use Laminas\Serializer\Adapter\PhpSerialize;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 class ContainerTest extends TestCase
 {
@@ -121,11 +122,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreateSimpleObject(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -140,11 +139,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testGetDataFromObject(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -155,7 +152,7 @@ class ContainerTest extends TestCase
         $this->assertNull($object->getDataNotExists());
 
         $this->assertEquals(
-            $this->getSimpleData($first, $second),
+            self::getSimpleData($first, $second),
             $object->toArray()
         );
     }
@@ -166,11 +163,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCheckingData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -201,11 +196,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testSetDataInObjectByMagicMethods(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -229,11 +222,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testSetDataInObjectByDataMethod(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -258,11 +249,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testRemovingData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -304,11 +293,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testDataRestorationForSingleData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -336,11 +323,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testFullDataRestoration(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -352,7 +337,7 @@ class ContainerTest extends TestCase
 
         $object->restore();
         $this->assertEquals(
-            $this->getSimpleData($first, $second),
+            self::getSimpleData($first, $second),
             $object->toArray()
         );
         $this->assertFalse($object->dataChanged());
@@ -364,11 +349,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testDataReplacement(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -389,11 +372,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testAccessToDataAsArray(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -420,11 +401,8 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
-     */
+     */#[DataProvider('baseDataProvider')]
     public function testAccessToDataByAttributes(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -461,10 +439,8 @@ class ContainerTest extends TestCase
      *
      * @param mixed $first
      * @param mixed $second
-     *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
      */
+    #[DataProvider('baseDataProvider')]
     public function testDataPreparationOnEnter(mixed $first, mixed $second): void
     {
         $object = new Container();
@@ -502,10 +478,8 @@ class ContainerTest extends TestCase
      *
      * @param mixed $first
      * @param mixed $second
-     *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
      */
+    #[DataProvider('baseDataProvider')]
     public function testDataPreparationOnReturn(mixed $first, mixed $second): void
     {
         $object = new Container();
@@ -544,14 +518,12 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleJsonData
      * @throws \ReflectionException|\JsonException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithJsonData(mixed $first, mixed $second): void
     {
-        $jsonData = $this->exampleJsonData($first, $second);
+        $jsonData = self::exampleJsonData($first, $second);
 
         $object = new Container([
             'data'  => $jsonData,
@@ -568,11 +540,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleStdData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithStdClassData(mixed $first, mixed $second): void
     {
         $std = $this->exampleStdData($first, $second);
@@ -589,11 +559,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleStdData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithSerializedArray(mixed $first, mixed $second): void
     {
         $serialized = $this->exampleSerializedData($first, $second);
@@ -613,11 +581,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleStdData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithSerializedObject(mixed $first, mixed $second): void
     {
         $serialized = $this->exampleSerializedData($first, $second, true);
@@ -639,12 +605,10 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleStdData
      * @throws \ReflectionException
      * @throws \DOMException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithSimpleXml(mixed $first, mixed $second): void
     {
         $xml = $this->exampleSimpleXmlData($first, $second);
@@ -672,12 +636,10 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleStdData
      * @throws \ReflectionException
      * @throws \DOMException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithXml(mixed $first, mixed $second): void
     {
         $xml = $this->exampleXmlData($first, $second);
@@ -694,6 +656,10 @@ class ContainerTest extends TestCase
             $this->exampleXmlData($first, $second),
             $object->toXml(false)
         );
+        $this->assertXmlStringEqualsXmlString(
+            $this->exampleXmlDataDtd($first, $second),
+            $object->toXml(false, __DIR__ . '/testDtd.dtd')
+        );
 
         $this->assertEquals($this->convertType($first), $object->getDataFirst()[0]);
         $this->assertEquals(
@@ -708,15 +674,12 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleJsonData
-     * @requires dataPreparationCommon
      * @throws \ReflectionException|\JsonException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithJsonDataDataPreparation(mixed $first, mixed $second): void
     {
-        $data = $this->exampleJsonData($first, $second);
+        $data = self::exampleJsonData($first, $second);
         $this->dataPreparationCommon($first, $data, 'json');
     }
 
@@ -726,12 +689,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleJsonData
-     * @requires dataPreparationCommon
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithStdClassDataDataPreparation(mixed $first, mixed $second): void
     {
         $data = $this->exampleStdData($first, $second);
@@ -744,12 +704,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleJsonData
-     * @requires dataPreparationCommon
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithSerializedArrayDataPreparation(mixed $first, mixed $second): void
     {
         $data = $this->exampleSerializedData($first, $second);
@@ -762,12 +719,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleJsonData
-     * @requires dataPreparationCommon
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithSerializedObjectDataPreparation(mixed $first, mixed $second): void
     {
         $data = $this->exampleSerializedData($first, $second, true);
@@ -792,12 +746,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleJsonData
-     * @requires dataPreparationCommon
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithSimpleXmlDataPreparation(mixed $first, mixed $second): void
     {
         $data = $this->exampleSimpleXmlData($first, $second);
@@ -810,12 +761,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires exampleJsonData
-     * @requires dataPreparationCommon
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithXmlDataPreparation(mixed $first, mixed $second): void
     {
         $data = $this->exampleXmlData($first, $second);
@@ -828,15 +776,12 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
-     * @requires exampleJsonData
      * @throws \JsonException|\ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsJson(mixed $first, mixed $second): void
     {
-        $data   = $this->exampleJsonData($first, $second);
+        $data   = self::exampleJsonData($first, $second);
         $object = $this->simpleObject($first, $second);
 
         $this->assertEquals($data, $object->toJson());
@@ -846,7 +791,7 @@ class ContainerTest extends TestCase
                 return self::IM_CHANGED;
             }
         ]);
-        $data = $this->exampleJsonData(self::IM_CHANGED, $second);
+        $data = self::exampleJsonData(self::IM_CHANGED, $second);
 
         $this->assertEquals($data, $object->toJson());
     }
@@ -857,12 +802,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
-     * @requires exampleStdData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsStdClass(mixed $first, mixed $second): void
     {
         $data   = $this->exampleStdData($first, $second);
@@ -886,12 +828,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
-     * @requires exampleStdData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsString(mixed $first, mixed $second): void
     {
         if (is_array($second)) {
@@ -918,12 +857,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
-     * @requires exampleSerializedData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsSerializedString(mixed $first, mixed $second): void
     {
         $data = $this->exampleSerializedData($first, $second);
@@ -947,11 +883,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires getSimpleData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsSerializedStringWithObject(mixed $first, mixed $second): void
     {
         $object = new Container();
@@ -960,7 +894,7 @@ class ContainerTest extends TestCase
                 return (object)$data;
             }
         ]);
-        $object->appendArray($this->getSimpleData($first, $second));
+        $object->appendArray(self::getSimpleData($first, $second));
         $data = $this->exampleSerializedData($first, 'data_second: {;skipped_object;}');
         $this->assertEquals(1,1);
 
@@ -973,13 +907,10 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
-     * @requires exampleSimpleXmlData
      * @throws \DOMException
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsXml(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -1014,11 +945,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testDataComparison(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -1085,11 +1014,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testObjectComparison(mixed $first, mixed $second): void
     {
         $object         = $this->simpleObject($first, $second);
@@ -1109,11 +1036,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testDataTraveling(mixed $first, mixed $second): void
     {
         if (is_array($second)) {
@@ -1148,11 +1073,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testObjectMerging(mixed $first, mixed $second): void
     {
         $object         = $this->simpleObject($first, $second);
@@ -1174,11 +1097,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithCsvData(mixed $first, mixed $second): void
     {
         $csv = $this->exampleCsvData($first, $second);
@@ -1205,25 +1126,43 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testChangeCsvDelimiter(mixed $first, mixed $second): void
     {
         $object = new Container();
         $csv    = $this->exampleCsvData($first, $second);
 
         $object->changeCsvDelimiter(',');
+        $object->changeCsvEnclosure("'");
+        $object->changeCsvEscape("|");
         $object->appendCsv($csv);
 
         $this->assertEquals($this->convertType($first), $object->getIntegerKey0()[0]);
+        $this->assertEquals(',', $object->returnCsvDelimiter());
+        $this->assertEquals("'", $object->returnCsvEnclosure());
+        $this->assertEquals("|", $object->returnCsvEscape());
+
 
         if (\is_array($second) && \count($second) > 1) {
             $this->assertEquals($second, $object->getIntegerKey1());
         } else {
             $this->assertEquals($this->convertType($second), $object->getIntegerKey1()[0]);
+        }
+
+        $object2 = new Container();
+        $object2->changeCsvLineDelimiter(";");
+        $object2->changeCsvDelimiter(',');
+        $csvChanged = str_replace("\n", ";", $csv);
+        $object2->appendCsv($csvChanged);
+
+        $this->assertEquals(";", $object2->returnCsvLineDelimiter());
+
+        if (\is_array($second) && \count($second) > 1) {
+            $this->assertEquals($second, $object2->getIntegerKey1());
+        } else {
+            $this->assertEquals($this->convertType($second), $object2->getIntegerKey1()[0]);
         }
     }
 
@@ -1233,17 +1172,35 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsCsvData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($this->convertType($first), $this->convertType($second));
         $object->changeCsvDelimiter(',');
 
         $this->assertEquals($this->exampleCsvData($first, $second), $object->toCsv());
+        
+        $object2 = new Container();
+        $object2->changeCsvDelimiter(',');
+        $csv = $this->exampleCsvData($first, $second);
+        $object2->appendCsv($csv);
+
+        if ($first === true) {
+            $first = 'true';
+            $second = 'false';
+        }
+
+        if (\is_array($second) && \count($second) > 1) {
+            $second = implode(',', $second);
+        }
+
+        if (is_null($first)) {
+            $first = 'null';
+        }
+
+        $this->assertEquals("$first\n$second", $object2->toCsv());
     }
 
     /**
@@ -1252,12 +1209,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
-     * @requires exampleIniData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testCreationWithIniData(mixed $first, mixed $second): void
     {
         $object = new Container([
@@ -1295,12 +1249,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
-     * @requires exampleIniData
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testExportObjectAsIniData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($this->convertType($first), $this->convertType($second));
@@ -1327,11 +1278,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testIsSetData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -1346,11 +1295,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testUnsetData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -1383,17 +1330,15 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testGetData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
 
         $this->assertEquals(
-            $this->getSimpleData($first, $second),
+            self::getSimpleData($first, $second),
             $object->getData()
         );
     }
@@ -1404,11 +1349,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testHasData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -1435,11 +1378,9 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testRestoreData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -1457,16 +1398,40 @@ class ContainerTest extends TestCase
     }
 
     /**
+     * test deprecated restoreData
+     *
+     * @param mixed $first
+     * @param mixed $second
+     *
+     * @throws \ReflectionException
+     */
+    #[DataProvider('baseDataProvider')]
+    public function testDestroyAll(mixed $first, mixed $second): void
+    {
+        $object = $this->simpleObject($first, $second);
+        $object->set('new_data', 'a');
+
+        $this->assertEquals($second, $object->get('data_second'));
+
+        $object->destroy();
+
+        $this->assertNull($object->get('data_second'));
+        $this->assertNull($object->get('data_first'));
+
+        $object->restoreData('data_second');
+
+        $this->assertEquals($second, $object->get('data_second'));
+    }
+
+    /**
      * test deprecated clearData
      *
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testClearData(mixed $first, mixed $second): void
     {
         $object = $this->simpleObject($first, $second);
@@ -1482,11 +1447,10 @@ class ContainerTest extends TestCase
      * @param mixed $first
      * @param mixed $second
      *
-     * @dataProvider baseDataProvider
-     * @requires baseDataProvider
-     * @requires simpleObject
+     * @throws \ReflectionException
      * @throws \ReflectionException
      */
+    #[DataProvider('baseDataProvider')]
     public function testSetData(mixed $first, mixed $second): void
     {
         $object = new Container();
@@ -1574,6 +1538,78 @@ class ContainerTest extends TestCase
     }
 
     /**
+     * @throws \ReflectionException
+     * @throws \DOMException
+     */
+    public function testAppendXmlWithObject(): void
+    {
+        $object = new Container();
+        $std = $this->exampleStdData('foo', 'bar');
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <object_data serialized_object="1"><![CDATA[O:8:"stdClass":2:{s:10:"data_first";s:3:"foo";s:11:"data_second";s:3:"bar";}]]></object_data>
+</root>
+';
+
+        $object->set('object_data', $std);
+        $this->assertEquals($xml, $object->toXml());
+
+        $object2 = new Container();
+        $object2->appendXml($xml);
+
+        $this->assertEquals($std, $object2->getObjectData());
+        
+    }
+
+    /**
+     * @throws \ReflectionException
+     * @throws \DOMException
+     */
+    public function testMultidimensionalArrayToXml(): void
+    {
+        $object = new Container();
+        $std = [
+            'data_first' => [
+                'foo',
+                'bar'
+            ],
+            'data_second' => [
+                'bar' => ['a', 'b'],
+                'baz' => ['c', 'd']
+            ],
+        ];
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <array_data>
+    <data_first>
+      <integer_key_0><![CDATA[foo]]></integer_key_0>
+      <integer_key_1><![CDATA[bar]]></integer_key_1>
+    </data_first>
+    <data_second>
+      <bar>
+        <integer_key_0><![CDATA[a]]></integer_key_0>
+        <integer_key_1><![CDATA[b]]></integer_key_1>
+      </bar>
+      <baz>
+        <integer_key_0><![CDATA[c]]></integer_key_0>
+        <integer_key_1><![CDATA[d]]></integer_key_1>
+      </baz>
+    </data_second>
+  </array_data>
+</root>
+';
+
+        $object->set('array_data', $std);
+        $this->assertEquals($xml, $object->toXml());
+
+        $object2 = new Container();
+        $object2->appendXml($xml);
+
+        $this->assertEquals($std, $object2->getArrayData());
+    }
+
+    /**
      * test unserialize with string (none array or object)
      *
      * @throws \ReflectionException
@@ -1612,9 +1648,9 @@ class ContainerTest extends TestCase
      * @return Container
      * @throws \ReflectionException
      */
-    protected function simpleObject(mixed $first, mixed $second): Container
+    public function simpleObject(mixed $first, mixed $second): Container
     {
-        return new Container(['data' => $this->getSimpleData($first, $second)]);
+        return new Container(['data' => self::getSimpleData($first, $second)]);
     }
 
     /**
@@ -1624,7 +1660,7 @@ class ContainerTest extends TestCase
      * @param mixed $second
      * @return array
      */
-    protected function getSimpleData(mixed $first, mixed $second): array
+    public static function getSimpleData(mixed $first, mixed $second): array
     {
         return [
             'data_first'    => $first,
@@ -1639,7 +1675,7 @@ class ContainerTest extends TestCase
      * @param mixed $second
      * @return string
      */
-    protected function exampleCsvData(mixed $first, mixed $second): string
+    public function exampleCsvData(mixed $first, mixed $second): string
     {
         $first  = $this->convertType($first);
         $second = $this->convertType($second);
@@ -1654,7 +1690,7 @@ class ContainerTest extends TestCase
      * @param bool $section
      * @return string
      */
-    protected function exampleIniData(mixed $first, mixed $second, bool $section = false): string
+    public function exampleIniData(mixed $first, mixed $second, bool $section = false): string
     {
         $ini    = '';
         $first  = $this->convertType($first);
@@ -1680,7 +1716,7 @@ class ContainerTest extends TestCase
      * @param mixed $second
      * @return string
      */
-    protected function exampleSimpleXmlData(mixed $first, mixed $second): string
+    public function exampleSimpleXmlData(mixed $first, mixed $second): string
     {
         $first  = $this->convertType($first);
         $second = $this->convertType($second);
@@ -1699,12 +1735,31 @@ class ContainerTest extends TestCase
      * @param mixed $second
      * @return string
      */
-    protected function exampleXmlData(mixed $first, mixed $second): string
+    public function exampleXmlData(mixed $first, mixed $second): string
     {
         $first  = $this->convertType($first);
         $second = $this->convertType($second);
 
         return "<?xml version='1.0' encoding='UTF-8'?>
+            <root>
+                <data_first data_second='$second'>$first</data_first>
+            </root>";
+    }
+
+    /**
+     * create xml data to test
+     *
+     * @param mixed $first
+     * @param mixed $second
+     * @return string
+     */
+    public function exampleXmlDataDtd(mixed $first, mixed $second): string
+    {
+        $first  = $this->convertType($first);
+        $second = $this->convertType($second);
+
+        return "<?xml version='1.0' encoding='UTF-8'?>
+            <!DOCTYPE root SYSTEM \"/var/www/html/tests/Test/testDtd.dtd\">
             <root>
                 <data_first data_second='$second'>$first</data_first>
             </root>";
@@ -1734,9 +1789,9 @@ class ContainerTest extends TestCase
      * @return string
      * @throws \JsonException
      */
-    protected function exampleJsonData(mixed $first, mixed $second): string
+    public static function exampleJsonData(mixed $first, mixed $second): string
     {
-        return json_encode($this->getSimpleData($first, $second), JSON_THROW_ON_ERROR);
+        return json_encode(self::getSimpleData($first, $second), JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -1747,15 +1802,15 @@ class ContainerTest extends TestCase
      * @param bool $object @object
      * @return string
      */
-    protected function exampleSerializedData(mixed $first, mixed $second, bool $object = false): string
+    public function exampleSerializedData(mixed $first, mixed $second, bool $object = false): string
     {
         $serializer = new PhpSerialize();
 
         if ($object) {
-            return $serializer->serialize((object)$this->getSimpleData($first, $second));
+            return $serializer->serialize((object)self::getSimpleData($first, $second));
         }
 
-        return $serializer->serialize($this->getSimpleData($first, $second));
+        return $serializer->serialize(self::getSimpleData($first, $second));
     }
 
     /**
@@ -1765,7 +1820,7 @@ class ContainerTest extends TestCase
      * @param mixed $second
      * @return \stdClass
      */
-    protected function exampleStdData(mixed $first, mixed $second): \stdClass
+    public function exampleStdData(mixed $first, mixed $second): \stdClass
     {
         $std                = new \stdClass();
         $std->data_first    = $first;

@@ -12,9 +12,9 @@ All notable changes to this project will be documented in this file.
 * Updated required libraries
 * Improved tests
 * Path provided to script changed from the current dir to a direct path
-* Improved report generation
 * Improved coverage
 * Fixed display when in line are Symfony Style markdowns
+* Some code improvement
 ### Removed
 * php-coveralls
 * Some unused configs and classes
